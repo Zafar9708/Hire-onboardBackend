@@ -112,16 +112,20 @@ router.patch('/:id', protect, async (req, res) => {
         const jobId = req.params.id;
         const { status } = req.body;
 
-        const validStatuses = ['Active', 'On Hold', 'Closed Own', 'Closed Lost'];
-        if (!validStatuses.includes(status)) {
+        const validStatuses = ['Active', 'On Hold', 'Closed Own', 'Closed Lost', 'Archived']; // Added 'Archived'
+        if (status && !validStatuses.includes(status)) {
             return res.status(400).json({ error: 'Invalid status value' });
         }
+        
         const job = await Job.findOne({ _id: jobId, userId: req.user._id });
         if (!job) {
             return res.status(404).json({ error: 'Job not found or unauthorized' });
         }
 
-        job.status = status;
+        if (status) {
+            job.status = status;
+        }
+        
         const updatedJob = await job.save();
 
         res.status(200).json({

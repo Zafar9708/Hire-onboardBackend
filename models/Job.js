@@ -51,7 +51,7 @@ const jobSchema = new mongoose.Schema({
     }, 
     experience: { type: String, required: true },
     jobDesc: { type: String, required: true },
-    status: { type: String, default: 'Active', enum: ['Active', 'On Hold', 'Closed Own', 'Closed Lost'] },
+    status: { type: String, default: 'Active', enum: ['Active', 'On Hold', 'Closed Own', 'Closed Lost','Archived'] },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     jobFormId: { type: mongoose.Schema.Types.ObjectId, ref: 'JobForm' },
     createdAt: { type: Date, default: Date.now }

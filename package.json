@@ -1,0 +1,33 @@
+{
+  "name": "hire-backend-node",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "��#\u0000 \u0000H\u0000i\u0000r\u0000e\u0000-\u0000O\u0000n\u0000b\u0000o\u0000a\u0000r\u0000d\u0000B\u0000a\u0000c\u0000k\u0000e\u0000n\u0000d\u0000\r\u0000 \u0000",
+  "dependencies": {
+    "@azure/msal-node": "^3.5.2",
+    "@google-cloud/local-auth": "^3.0.1",
+    "axios": "^1.9.0",
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "googleapis": "^148.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.14.1",
+    "multer": "^1.4.5-lts.2",
+    "nodemailer": "^6.10.1",
+    "pdf-parse": "^1.1.1",
+    "textract": "^2.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

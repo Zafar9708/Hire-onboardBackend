@@ -77,33 +77,40 @@ app.get('/', (req, res) => {
 
 
 //for google refresh tokens 
+const axios = require('axios');
+
 app.get('/auth/google/callback', async (req, res) => {
-    const code = req.query.code;
-  
-    if (!code) return res.status(400).send('No code provided.');
-  
-    try {
-      const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({
+  const code = req.query.code;
+
+  if (!code) return res.status(400).send('No code provided.');
+
+  try {
+    const tokenResponse = await axios.post(
+      'https://oauth2.googleapis.com/token',
+      new URLSearchParams({
         code,
-        client_id: 'process.env.GOOGLE_CLIENT_ID',
-        client_secret: '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',
-        redirect_uri: 'http://localhost:5000/auth/google/callback',
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
         grant_type: 'authorization_code',
-      }), {
+      }),
+      {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-      });
-  
-      const tokens = tokenResponse.data;
-      console.log('Tokens:', tokens);
-  
-      res.send(`<pre>Tokens received:\n${JSON.stringify(tokens, null, 2)}</pre>`);
-    } catch (error) {
-      console.error('Token exchange failed:', error.response?.data || error.message);
-      res.status(500).send('Failed to exchange code for tokens.');
-    }
-  });
+      }
+    );
+
+    const tokens = tokenResponse.data;
+    console.log('Tokens:', tokens);
+
+    res.send(`<pre>Tokens received:\n${JSON.stringify(tokens, null, 2)}</pre>`);
+  } catch (error) {
+    console.error('Token exchange failed:', error.response?.data || error.message);
+    res.status(500).send('Failed to exchange code for tokens.');
+  }
+});
+
 
 
   mongoose.connect(process.env.MONGO_URI)

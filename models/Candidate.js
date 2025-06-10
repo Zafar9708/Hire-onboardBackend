@@ -32,7 +32,8 @@ const candidateSchema = new mongoose.Schema({
     originalName: String
   }],
   createdAt: { type: Date, default: Date.now },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } 
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } ,
+  jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' }
 });
 
 module.exports = mongoose.model('Candidate', candidateSchema);

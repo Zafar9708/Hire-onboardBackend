@@ -8,6 +8,7 @@ const upload = require('../middleware/upload');
 const Candidate = require('../models/Candidate');
 const { protect } = require('../middleware/authMiddleware');
 const transporter = require('../config/email');
+const { candidateforParticularJob } = require('../controllers/candidateController');
 
 
 router.post(
@@ -38,10 +39,11 @@ router.post(
 
 router.get('/', protect, async (req, res) => {
   try {
-    const candidates = await Candidate.find({ userId: req.user._id });  
+    const candidates = await Candidate.find();  
+    console.log('hksdfjns',candidates)
     
     if (candidates.length === 0) {
-      return res.status(404).json({ message: 'No candidates found for this user' });
+      return res.status(400).json({ message: 'No candidates found for this user' });
     }
 
     res.json(candidates); 
@@ -136,6 +138,8 @@ router.post('/send-bulk-emails',  async (req, res) => {
     res.status(500).json({ error: 'Failed to send emails.' });
   }
 });
+
+router.get('/getCandidateByJobs/:jobId',protect,candidateforParticularJob) 
 
 
 

@@ -72,7 +72,7 @@ router.post('/', protect, async (req, res) => {
 
 router.get('/', protect, async (req, res) => {
     try {
-        const jobs = await Job.find({ userId: req.user._id }).populate('jobFormId');
+        const jobs = await Job.find().populate('jobFormId');
 
         if (!jobs || jobs.length === 0) {
             return res.status(404).json({ error: 'No jobs found' });

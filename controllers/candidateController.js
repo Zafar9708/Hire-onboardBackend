@@ -48,6 +48,19 @@ const createCandidate = async (req, res) => {
   }
 };
 
+const candidateforParticularJob = async(req,res)=>{
+  try {
+    const { jobId } = req.params;
+
+    const candidates = await Candidate.find({ jobId }).populate("jobId"); // Optional: populate job details
+
+    res.status(200).json({ success: true, candidates });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server Error", error });
+  }
+
+}
 module.exports = {
-  createCandidate
+  createCandidate,
+  candidateforParticularJob
 };

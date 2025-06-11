@@ -10,8 +10,9 @@ const createCandidate = async (req, res) => {
     data.userId = req.user._id;
 
     const candidate = new Candidate(data);
-    await candidate.save();
-    res.status(201).json(candidate);
+    const response = await candidate.save();
+    console.log("ksdnckdcmds",response)
+    res.status(201).json({msg:"Candidate saved!",response});
   } catch (error) {
     console.error('Error creating candidate:', error);
     res.status(500).json({ error: 'Internal Server Error' });

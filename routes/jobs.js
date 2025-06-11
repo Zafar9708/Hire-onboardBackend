@@ -32,7 +32,7 @@ router.post('/', protect, async (req, res) => {
         const {
             jobType, location, openings, targetHireDate, currency,
             amount, allowReapply, reapplyDate, markPriority, hiringFlow,
-            BusinessUnit, Client
+            BusinessUnit, Client, recruiters, salesPerson
         } = req.body;
 
         if (BusinessUnit === 'external' && !Client) {
@@ -51,7 +51,9 @@ router.post('/', protect, async (req, res) => {
             markPriority,
             hiringFlow,
             BusinessUnit,
-            Client: BusinessUnit === 'external' ? Client : undefined
+            Client: BusinessUnit === 'external' ? Client : undefined,
+            recruiters,
+            salesPerson
         });
 
         const savedJobForm = await jobForm.save();

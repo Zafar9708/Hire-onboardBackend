@@ -123,5 +123,5 @@ app.get('/auth/google/callback', async (req, res) => {
   })
   .catch(err => {
       console.error('❌ MongoDB connection error:', err.message);
-      process.exit(1); // Exit if DB connection fails
+      process.exit(1); 
   });

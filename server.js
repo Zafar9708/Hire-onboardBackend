@@ -6,9 +6,8 @@ const axios = require('axios');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const jobTemplateRoutes = require('./routes/jobTemplateRoutes');
 const errorHandler = require('./middleware/errorHandler');
-const jobRoutes = require('./routes/jobs');
+const jobRoutes = require('./routes/jobsRoutes');
 const departmentRoutes = require('./routes/departmentRoutes');
 const authRoutes = require('./routes/authRoutes');
 const companyRoutes = require('./routes/companyRoutes');
@@ -46,7 +45,6 @@ app.use('/company', companyRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/jobform', jobFormRoutes);
 app.use('/api/jobs', jobRoutes);
-app.use('/api/job-templates', jobTemplateRoutes);
 app.use('/api/resumes', resumeRoutes);
 
 

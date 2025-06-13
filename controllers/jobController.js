@@ -5,7 +5,7 @@ const jobForm = require('../models/jobForm');
 
 const getJobTemplates = (req, res) => {
   try {
-    console.log('📦 Templates loaded:', templates);
+    console.log('Templates loaded:', templates);
     res.status(200).json(templates);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching job templates.' });
@@ -37,14 +37,15 @@ const postJob = async (req, res) => {
         const {
             jobType, location, openings, targetHireDate, currency,
             amount, allowReapply, reapplyDate, markPriority, hiringFlow,
-            BusinessUnit, Client, recruiters, salesPerson
+            BusinessUnit, Client,  salesPerson,
+            recruitingPerson
         } = req.body;
 
         if (BusinessUnit === 'external' && !Client) {
             return res.status(400).json({ error: "Client is required when BusinessUnit is external" });
         }
 
-        const jobForm = new jobForm({
+        const jobFormInstance = new jobForm({
             jobType,
             location,
             openings,
@@ -57,11 +58,11 @@ const postJob = async (req, res) => {
             hiringFlow,
             BusinessUnit,
             Client: BusinessUnit === 'external' ? Client : undefined,
-            recruiters,
-            salesPerson
+            salesPerson,
+            recruitingPerson
         });
 
-        const savedJobForm = await jobForm.save();
+        const savedJobForm = await jobFormInstance.save();
 
         savedJob.jobFormId = savedJobForm._id;
         await savedJob.save();

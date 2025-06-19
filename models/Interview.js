@@ -43,6 +43,7 @@ const interviewSchema = new mongoose.Schema({
     notes: { type: String },
     scheduledBy: { type: String, required: true },
     status: { type: String, default: 'scheduled' },
+    jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' },
     createdAt: { type: Date, default: Date.now }
 });
 

@@ -27,7 +27,8 @@ const scheduleInterview = async (req, res) => {
             platform,
             templateId,
             notes,
-            scheduledBy
+            scheduledBy,
+            jobId
         } = req.body;
 
         if (!candidate || !interviewerIds || !date || !startTime || !duration || 

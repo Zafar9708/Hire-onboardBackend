@@ -1,7 +1,7 @@
 const templates = require('../data/templates.json'); 
 const Counter = require('../models/Counter');
 const Job = require('../models/Job');
-const jobForm = require('../models/jobForm');
+const JobForm = require('../models/jobForm');
 
 const getJobTemplates = (req, res) => {
   try {
@@ -44,7 +44,7 @@ const postJob = async (req, res) => {
             return res.status(400).json({ error: "Client is required when BusinessUnit is external" });
         }
 
-        const jobForm = new jobForm({
+        const jobForm = new JobForm({
             jobType,
             location,
             openings,
@@ -80,7 +80,7 @@ const getAllJobs = async (req, res) => {
         const jobs = await Job.find().populate('jobFormId');
 
         if (!jobs || jobs.length === 0) {
-            return res.status(404).json({ error: 'No jobs found' });
+            return res.status(400).json({ msg: 'No jobs found',jobs:[] });
         }
 
         res.status(200).json({

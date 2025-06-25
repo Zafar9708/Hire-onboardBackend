@@ -19,6 +19,10 @@ const offlineInterviewRoutes = require('./routes/offlineInterviewRoutes');
 const candidateStageRoutes = require('./routes/candidateStageRoutes');
 const remarkRoutes = require('./routes/remarks');
 const jobStatusRoutes = require('./routes/jobStatus');
+const employeeRoutes=require('./routes/employeeRoutes')
+const stageRoutes = require('./routes/stageRoutes');
+
+
 
 
 
@@ -29,7 +33,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-app.use(bodyParser.json());
+// app.use(bodyParser.json());
 app.use(errorHandler);
 
 // Middleware
@@ -46,6 +50,7 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/jobform', jobFormRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/resumes', resumeRoutes);
+app.use('/api/stages', stageRoutes);
 
 
 //for interviews
@@ -72,6 +77,10 @@ app.get('/', (req, res) => {
     res.send('🚀 API is running...');
 });
 
+
+//for employee
+
+app.use('/api/employees',employeeRoutes)
 
 
 //for google refresh tokens 

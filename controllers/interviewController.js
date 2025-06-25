@@ -118,7 +118,8 @@ const scheduleInterview = async (req, res) => {
             subject: template.subject,
             emailBody,
             notes,
-            scheduledBy
+            scheduledBy,
+            jobId
         });
 
         await interview.save();
@@ -195,26 +196,39 @@ exports.getRounds = async (req, res) => {
 
 const getAllInterviews = async (req, res) => {
     try {
-        const interviews = await Interview.find()
-            .populate('interviewers', 'name email')
-            .populate('templateUsed', 'name')
-            .populate('scheduledBy', 'name email')
-            .sort({ date: -1, startTime: -1 });
-
-        res.status(200).json({
-            success: true,
-            count: interviews.length,
-            data: interviews
-        });
+      const { jobName } = req.query;
+  
+      let query = {};
+  
+      if (jobName) {
+        const matchingJobs = await Job.find({ title: { $regex: jobName, $options: 'i' } }, '_id');
+        const jobIds = matchingJobs.map(job => job._id);
+        query.jobId = { $in: jobIds };
+      }
+  
+      const interviews = await Interview.find(query)
+        .populate('interviewers', 'name email')
+        .populate('templateUsed', 'name')
+        .populate('scheduledBy', 'name email')
+        .populate('jobId', 'jobTitle') 
+        
+        .sort({ date: -1, startTime: -1 });
+  
+      res.status(200).json({
+        success: true,
+        count: interviews.length,
+        data: interviews
+      });
     } catch (error) {
-        console.error('Error fetching interviews:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: error.message
-        });
+      console.error('Error fetching interviews:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error.message
+      });
     }
-};
+  };
+  
 
 const getInterviewById = async (req, res) => {
     try {

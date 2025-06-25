@@ -25,6 +25,18 @@ router.get('/interviewers', interviewerController.getAllInterviewers);
 router.post('/email-templates', emailTemplateController.createTemplate);
 router.get('/email-templates', emailTemplateController.getAllTemplates);
 
+router.get('/jobs/:jobId', async (req, res) => {
+    try {
+      const job = await job.findById(req.params.jobId);
+      if (!job) {
+        return res.status(404).json({ success: false, error: 'Job not found' });
+      }
+      res.json({ success: true, data: job });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
 
 
 module.exports = router;

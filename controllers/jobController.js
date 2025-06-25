@@ -1,11 +1,13 @@
+
+
 const templates = require('../data/templates.json'); 
 const Counter = require('../models/Counter');
 const Job = require('../models/Job');
-const JobForm = require('../models/jobForm');
+const jobForm = require('../models/jobForm');
 
 const getJobTemplates = (req, res) => {
   try {
-    console.log('📦 Templates loaded:', templates);
+    console.log('Templates loaded:', templates);
     res.status(200).json(templates);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching job templates.' });
@@ -37,14 +39,15 @@ const postJob = async (req, res) => {
         const {
             jobType, location, openings, targetHireDate, currency,
             amount, allowReapply, reapplyDate, markPriority, hiringFlow,
-            BusinessUnit, Client
+            BusinessUnit, Client,  salesPerson,
+            recruitingPerson
         } = req.body;
 
         if (BusinessUnit === 'external' && !Client) {
             return res.status(400).json({ error: "Client is required when BusinessUnit is external" });
         }
 
-        const jobForm = new JobForm({
+        const jobFormInstance = new jobForm({
             jobType,
             location,
             openings,
@@ -56,10 +59,12 @@ const postJob = async (req, res) => {
             markPriority,
             hiringFlow,
             BusinessUnit,
-            Client: BusinessUnit === 'external' ? Client : undefined
+            Client: BusinessUnit === 'external' ? Client : undefined,
+            salesPerson,
+            recruitingPerson
         });
 
-        const savedJobForm = await jobForm.save();
+        const savedJobForm = await jobFormInstance.save();
 
         savedJob.jobFormId = savedJobForm._id;
         await savedJob.save();
@@ -80,7 +85,7 @@ const getAllJobs = async (req, res) => {
         const jobs = await Job.find().populate('jobFormId');
 
         if (!jobs || jobs.length === 0) {
-            return res.status(400).json({ msg: 'No jobs found',jobs:[] });
+            return res.status(404).json({ error: 'No jobs found' });
         }
 
         res.status(200).json({

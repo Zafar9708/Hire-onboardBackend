@@ -29,7 +29,7 @@ exports.scheduleInterview = async (req, res) => {
         if (interviewersExist.length !== interviewers.length) {
             return res.status(404).json({ error: 'One or more interviewers not found' });
         }
-
+        
         const interview = new OfflineInterview({
             candidate,
             interviewers,

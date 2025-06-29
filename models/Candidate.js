@@ -74,6 +74,15 @@ const candidateSchema = new mongoose.Schema({
     path: String,
     originalName: String
   }],
+  comments: [{
+    text: String,
+    stageChangedFrom: String,
+    stageChangedTo: String,
+    changedAt: { type: Date, default: Date.now },
+    changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  }],
+  rejectionType: String,
+  // rejectionReason: String,
   createdAt: { type: Date, default: Date.now },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } ,
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' }

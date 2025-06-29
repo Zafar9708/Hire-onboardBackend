@@ -10,7 +10,7 @@ const getJobTemplates = (req, res) => {
     console.log('Templates loaded:', templates);
     res.status(200).json(templates);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching job templates.' });
+    res.status(500).json({ message: 'Error fetching the job templates' });
   }
 };
 
@@ -75,7 +75,7 @@ const postJob = async (req, res) => {
             jobForm: savedJobForm,
         });
     } catch (error) {
-        console.error('🔥 Error:', error);
+        console.error('Error:', error);
         res.status(500).json({ error: 'Failed to create job and jobForm' });
     }
 }
@@ -134,7 +134,7 @@ const getJobDetailById = async (req, res) => {
             job,
         });
     } catch (error) {
-        console.error('🔥 Error:', error);
+        console.error('Error:', error);
         res.status(500).json({ error: 'Failed to fetch job and jobForm' });
     }
 }
@@ -144,7 +144,7 @@ const changeJobStatusById = async (req, res) => {
         const jobId = req.params.id;
         const { status } = req.body;
 
-        const validStatuses = ['Active', 'On Hold', 'Closed Won', 'Closed Lost', 'Archived']; // Added 'Archived'
+        const validStatuses = ['Active', 'On Hold', 'Closed Won', 'Closed Lost', 'Archived']; 
         if (status && !validStatuses.includes(status)) {
             return res.status(400).json({ error: 'Invalid status value' });
         }

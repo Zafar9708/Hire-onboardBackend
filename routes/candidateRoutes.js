@@ -93,8 +93,12 @@ router.put('/:id/stage',  moveCandidateStage);
 
 router.delete('/:id', protect, deletCandidateById);
 
+
+
 router.post('/send-bulk-emails', protect, sendBulEmailToCandidate);
 
 router.get('/getCandidateByJobs/:jobId', protect, candidateforParticularJob);
+
+
 
 module.exports = router;

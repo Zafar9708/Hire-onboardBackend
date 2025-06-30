@@ -6,14 +6,17 @@ const Job = require('../models/Job');
 const JobForm = require('../models/jobForm');
 const { protect } = require('../middleware/authMiddleware');
 const Counter = require('../models/Counter'); 
-const { getJobTemplates, postJob, getAllJobs, getJobDetailById, changeJobStatusById, getAllJobsByStatus } = require('../controllers/jobController');
+const { getJobTemplates, postJob, getAllJobs, getJobDetailById, changeJobStatusById, getAllJobsByStatus,updateJob } = require('../controllers/jobController');
 
 router.post('/', protect, postJob);
+router.put('/:id',protect, updateJob);
+
 
 router.get('/', protect, getAllJobs);
 router.get('/byStatus/:status', protect, getAllJobsByStatus);
 
-router.get('/byId/:id', getJobDetailById); // make this route protected after some time
+router.get('/byId/:id', getJobDetailById); 
+
 
 router.patch('/:id', protect, changeJobStatusById);
 

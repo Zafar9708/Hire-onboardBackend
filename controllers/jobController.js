@@ -170,11 +170,73 @@ const changeJobStatusById = async (req, res) => {
     }
 }
 
+const updateJob = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const job = await Job.findById(id).populate('jobFormId');
+
+        if (!job) {
+            return res.status(404).json({ error: "Job not found" });
+        }
+
+        
+        const { jobTitle, department, experience, jobDesc } = req.body;
+        if (jobTitle) job.jobTitle = jobTitle;
+        if (department) job.department = department;
+        if (experience) job.experience = experience;
+        if (jobDesc) job.jobDesc = jobDesc;
+
+        const {
+            jobType, location, openings, targetHireDate, currency,
+            amount, allowReapply, reapplyDate, markPriority, hiringFlow,
+            BusinessUnit, Client, salesPerson, recruitingPerson
+        } = req.body;
+
+        if (BusinessUnit === 'external' && !Client) {
+            return res.status(400).json({ error: "Client is required when BusinessUnit is external" });
+        }
+
+        
+        const jobFormData = await jobForm.findById(job.jobFormId);
+        if (jobFormData) {
+            jobFormData.jobType = jobType ?? jobFormData.jobType;
+            jobFormData.location = location ?? jobFormData.location;
+            jobFormData.openings = openings ?? jobFormData.openings;
+            jobFormData.targetHireDate = targetHireDate ?? jobFormData.targetHireDate;
+            jobFormData.currency = currency ?? jobFormData.currency;
+            jobFormData.amount = amount ?? jobFormData.amount;
+            jobFormData.allowReapply = allowReapply ?? jobFormData.allowReapply;
+            jobFormData.reapplyDate = reapplyDate ?? jobFormData.reapplyDate;
+            jobFormData.markPriority = markPriority ?? jobFormData.markPriority;
+            jobFormData.hiringFlow = hiringFlow ?? jobFormData.hiringFlow;
+            jobFormData.BusinessUnit = BusinessUnit ?? jobFormData.BusinessUnit;
+            jobFormData.Client = BusinessUnit === 'external' ? Client : undefined;
+            jobFormData.salesPerson = salesPerson ?? jobFormData.salesPerson;
+            jobFormData.recruitingPerson = recruitingPerson ?? jobFormData.recruitingPerson;
+
+            await jobFormData.save();
+        }
+
+        await job.save();
+
+        return res.status(200).json({
+            message: 'Job and JobForm updated successfully',
+            job,
+            jobForm: jobFormData
+        });
+
+    } catch (error) {
+        console.error('Update Error:', error);
+        return res.status(500).json({ error: 'Failed to update job and jobForm' });
+    }
+};
+
 module.exports = {
   getJobTemplates,
   postJob,
   getAllJobs,
   getAllJobsByStatus,
   getJobDetailById,
-  changeJobStatusById
+  changeJobStatusById,
+  updateJob
 };

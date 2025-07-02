@@ -12,6 +12,7 @@ router.post('/', protect, postJob);
 router.put('/:id',protect, updateJob);
 
 
+
 router.get('/', protect, getAllJobs);
 router.get('/byStatus/:status', protect, getAllJobsByStatus);
 

@@ -18,28 +18,24 @@ const postJob = async (req, res) => {
     try {
         const { jobTitle, department, experience, jobDesc } = req.body;
 
-        const counter = await Counter.findByIdAndUpdate(
-            { _id: 'jobNumber' },
-            { $inc: { seq: 1 } },
-            { new: true, upsert: true }
-        );
+        const jobCount = await Job.countDocuments();
+        const nextJobNumber = jobCount + 1;
+        const jobName = `WR${String(nextJobNumber).padStart(2, '0')}`;
 
-        const jobName = `WR${String(counter.seq).padStart(2, '0')}`;
-
-        const job = new Job({ 
+        const job = new Job({
             jobName,
-            jobTitle, 
-            department, 
-            experience, 
-            jobDesc, 
-            userId: req.user._id 
+            jobTitle,
+            department,
+            experience,
+            jobDesc,
+            userId: req.user._id
         });
         const savedJob = await job.save();
 
         const {
             jobType, location, openings, targetHireDate, currency,
             amount, allowReapply, reapplyDate, markPriority, hiringFlow,
-            BusinessUnit, Client,  salesPerson,
+            BusinessUnit, Client, salesPerson,
             recruitingPerson
         } = req.body;
 
@@ -78,7 +74,8 @@ const postJob = async (req, res) => {
         console.error('Error:', error);
         res.status(500).json({ error: 'Failed to create job and jobForm' });
     }
-}
+};
+
 
 const getAllJobs = async (req, res) => {
     try {
@@ -231,6 +228,29 @@ const updateJob = async (req, res) => {
     }
 };
 
+const deleteJob = async (req, res) => {
+    try {
+      const jobId = req.params.id;
+  
+      const deletedJob = await Job.findByIdAndDelete(jobId);
+      if (!deletedJob) {
+        return res.status(404).json({ success: false, message: "Job not found" });
+      }
+  
+      return res.status(200).json({
+        success: true,
+        message: "Job deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting job:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  };
+  
+
 module.exports = {
   getJobTemplates,
   postJob,
@@ -238,5 +258,6 @@ module.exports = {
   getAllJobsByStatus,
   getJobDetailById,
   changeJobStatusById,
-  updateJob
+  updateJob,
+  deleteJob
 };

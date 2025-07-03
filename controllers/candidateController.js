@@ -270,21 +270,25 @@ const candidateforParticularJob = async (req, res) => {
 const downloadResume = async (req, res) => {
   try {
     const candidateId = req.params.id;
-    console.log('Downloading resume for candidate:', candidateId);
+    console.log('🎯 Candidate ID:', candidateId);
 
     const candidate = await Candidate.findById(candidateId);
-    if (!candidate || !candidate.fileUrl) {
-      console.log('Candidate or fileUrl not found in DB');
+    console.log("📦 Candidate fetched:", candidate);
+    console.log("📦 Candidate.resume:", candidate?.resume);
+    console.log("📄 Resume path:", candidate?.resume?.path);
+
+    if (!candidate || !candidate.resume?.path) {
+      console.log('❌ Resume not found in DB');
       return res.status(404).json({ error: 'Resume not found in database records' });
     }
 
-    const relativePath = candidate.fileUrl.replace(/^\//, ''); // remove leading slash
+    const relativePath = candidate.resume.path.replace(/^\//, '');
     const filePath = path.resolve(__dirname, '..', relativePath);
 
-    console.log('Resolved file path:', filePath);
+    console.log("Resolved path:", filePath);
 
     if (!fs.existsSync(filePath)) {
-      console.log('File not found at resolved path');
+      console.log('❌ File not found at path:', filePath);
       return res.status(404).json({ error: 'Resume file not found on server' });
     }
 
@@ -300,7 +304,8 @@ const downloadResume = async (req, res) => {
     const fileStream = fs.createReadStream(filePath);
     fileStream.pipe(res);
   } catch (error) {
-    console.error('Download error:', error.message);
+    console.error('🔥 Download error:', error.message);
+    console.error(error.stack);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

@@ -267,30 +267,42 @@ const downloadResume = async (req, res) => {
   try {
     const candidate = await Candidate.findById(req.params.id);
     if (!candidate || !candidate.resume?.path) {
-      return res.status(404).json({ message: 'Resume not found' });
+      return res.status(404).json({ error: 'Resume not found' });
     }
     
-    const filePath = path.join(__dirname, '..', candidate.resume.path);
+    // Construct absolute file path
+    const filePath = path.resolve(__dirname, '..', candidate.resume.path);
     
+    // Check if file exists
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'Resume file not found' });
+      return res.status(404).json({ error: 'Resume file not found' });
     }
 
+    // Determine content type
     const ext = path.extname(filePath).toLowerCase();
     let contentType = 'application/octet-stream';
     
     if (ext === '.pdf') contentType = 'application/pdf';
     else if (ext === '.doc') contentType = 'application/msword';
-    else if (ext === '.docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    else if (ext === '.docx') {
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
 
+    // Set headers and stream file
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename=${candidate.firstName}_${candidate.lastName}_Resume${ext}`);
+    res.setHeader('Content-Disposition', `attachment; filename="${candidate.firstName}_${candidate.lastName}_Resume${ext}"`);
     
     const fileStream = fs.createReadStream(filePath);
+    fileStream.on('error', (err) => {
+      console.error('File stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Error streaming file' });
+      }
+    });
     fileStream.pipe(res);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Download error:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
@@ -298,28 +310,34 @@ const previewResume = async (req, res) => {
   try {
     const candidate = await Candidate.findById(req.params.id);
     if (!candidate || !candidate.resume?.path) {
-      return res.status(404).json({ message: 'Resume not found' });
+      return res.status(404).json({ error: 'Resume not found' });
     }
     
-    const filePath = path.join(__dirname, '..', candidate.resume.path);
+    const filePath = path.resolve(__dirname, '..', candidate.resume.path);
     
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'Resume file not found' });
+      return res.status(404).json({ error: 'Resume file not found' });
     }
 
     const ext = path.extname(filePath).toLowerCase();
     if (ext !== '.pdf') {
-      return res.status(400).json({ message: 'Only PDF files can be previewed' });
+      return res.status(400).json({ error: 'Only PDF files can be previewed' });
     }
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=${candidate.firstName}_${candidate.lastName}_Resume.pdf`);
+    res.setHeader('Content-Disposition', `inline; filename="${candidate.firstName}_${candidate.lastName}_Resume.pdf"`);
     
     const fileStream = fs.createReadStream(filePath);
+    fileStream.on('error', (err) => {
+      console.error('File stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Error streaming file' });
+      }
+    });
     fileStream.pipe(res);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Preview error:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 

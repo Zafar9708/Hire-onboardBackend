@@ -265,20 +265,27 @@ const candidateforParticularJob = async (req, res) => {
 
 const downloadResume = async (req, res) => {
   try {
+    // 1. Verify candidate exists with resume
     const candidate = await Candidate.findById(req.params.id);
     if (!candidate || !candidate.resume?.path) {
-      return res.status(404).json({ error: 'Resume not found' });
-    }
-    
-    // Construct absolute file path
-    const filePath = path.resolve(__dirname, '..', candidate.resume.path);
-    
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'Resume file not found' });
+      return res.status(404).json({ 
+        error: 'Resume not found in database records' 
+      });
     }
 
-    // Determine content type
+    // 2. Construct absolute file path (remove any leading slashes)
+    const relativePath = candidate.resume.path.replace(/^\//, '');
+    const filePath = path.resolve(__dirname, '..', relativePath);
+
+    // 3. Verify file exists
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found at path: ${filePath}`);
+      return res.status(404).json({ 
+        error: 'Resume file not found on server' 
+      });
+    }
+
+    // 4. Determine content type
     const ext = path.extname(filePath).toLowerCase();
     let contentType = 'application/octet-stream';
     
@@ -288,56 +295,81 @@ const downloadResume = async (req, res) => {
       contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     }
 
-    // Set headers and stream file
+    // 5. Stream file with proper headers
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${candidate.firstName}_${candidate.lastName}_Resume${ext}"`);
     
     const fileStream = fs.createReadStream(filePath);
+    
     fileStream.on('error', (err) => {
       console.error('File stream error:', err);
       if (!res.headersSent) {
-        res.status(500).json({ error: 'Error streaming file' });
+        res.status(500).json({ error: 'Error streaming file content' });
       }
     });
+
     fileStream.pipe(res);
+    
   } catch (error) {
     console.error('Download error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
 const previewResume = async (req, res) => {
   try {
+    // 1. Verify candidate exists with resume
     const candidate = await Candidate.findById(req.params.id);
     if (!candidate || !candidate.resume?.path) {
-      return res.status(404).json({ error: 'Resume not found' });
-    }
-    
-    const filePath = path.resolve(__dirname, '..', candidate.resume.path);
-    
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'Resume file not found' });
+      return res.status(404).json({ 
+        error: 'Resume not found in database records' 
+      });
     }
 
+    // 2. Construct absolute file path (remove any leading slashes)
+    const relativePath = candidate.resume.path.replace(/^\//, '');
+    const filePath = path.resolve(__dirname, '..', relativePath);
+
+    // 3. Verify file exists
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found at path: ${filePath}`);
+      return res.status(404).json({ 
+        error: 'Resume file not found on server' 
+      });
+    }
+
+    // 4. Only allow PDF previews
     const ext = path.extname(filePath).toLowerCase();
     if (ext !== '.pdf') {
-      return res.status(400).json({ error: 'Only PDF files can be previewed' });
+      return res.status(400).json({ 
+        error: 'Only PDF files can be previewed' 
+      });
     }
 
+    // 5. Stream file with proper headers
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${candidate.firstName}_${candidate.lastName}_Resume.pdf"`);
     
     const fileStream = fs.createReadStream(filePath);
+    
     fileStream.on('error', (err) => {
       console.error('File stream error:', err);
       if (!res.headersSent) {
-        res.status(500).json({ error: 'Error streaming file' });
+        res.status(500).json({ error: 'Error streaming file content' });
       }
     });
+
     fileStream.pipe(res);
+    
   } catch (error) {
     console.error('Preview error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

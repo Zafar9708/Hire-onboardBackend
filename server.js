@@ -2,7 +2,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const axios = require('axios');
-const path = require('path');
 
 
 const dotenv = require('dotenv');
@@ -54,8 +53,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/resumes', resumeRoutes);
 app.use('/api/stages', stageRoutes);
 
-// Serve static files from the uploads folder
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 
 

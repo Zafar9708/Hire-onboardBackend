@@ -270,33 +270,33 @@ const candidateforParticularJob = async (req, res) => {
 const downloadResume = async (req, res) => {
   try {
     const candidateId = req.params.id;
-    console.log('🎯 Candidate ID:', candidateId);
-
     const candidate = await Candidate.findById(candidateId);
-    console.log("📦 Candidate fetched:", candidate);
-    console.log("📦 Candidate.resume:", candidate?.resume);
-    console.log("📄 Resume path:", candidate?.resume?.path);
 
     if (!candidate || !candidate.resume?.path) {
-      console.log('❌ Resume not found in DB');
       return res.status(404).json({ error: 'Resume not found in database records' });
     }
 
+    // Normalize path (remove leading slashes)
     const relativePath = candidate.resume.path.replace(/^\//, '');
-    const filePath = path.resolve(__dirname, '..', relativePath);
+    const filePath = path.resolve(__dirname, '..', relativePath); // Goes up from `controllers/` to project root
 
-    console.log("Resolved path:", filePath);
+    // Debug: Log paths
+    console.log("Resume path from DB:", candidate.resume.path);
+    console.log("Resolved file path:", filePath);
 
+    // Check if file exists
     if (!fs.existsSync(filePath)) {
-      console.log('❌ File not found at path:', filePath);
+      console.error("File not found. Checked path:", filePath);
       return res.status(404).json({ error: 'Resume file not found on server' });
     }
 
+    // Set headers and stream the file
     const ext = path.extname(filePath).toLowerCase();
-    let contentType = 'application/octet-stream';
-    if (ext === '.pdf') contentType = 'application/pdf';
-    else if (ext === '.doc') contentType = 'application/msword';
-    else if (ext === '.docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const contentType = {
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    }[ext] || 'application/octet-stream';
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${candidate.firstName}_${candidate.lastName}_Resume${ext}"`);
@@ -304,8 +304,7 @@ const downloadResume = async (req, res) => {
     const fileStream = fs.createReadStream(filePath);
     fileStream.pipe(res);
   } catch (error) {
-    console.error('🔥 Download error:', error.message);
-    console.error(error.stack);
+    console.error('Download error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

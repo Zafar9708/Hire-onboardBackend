@@ -136,6 +136,10 @@
 //-----------
 
 const { transporter } = require('../config/email');
+const path = require('path');
+const fs = require('fs');
+
+
 const Candidate = require('../models/Candidate');
 const { parseResume } = require('../utils/resumeParser');
 
@@ -269,12 +273,12 @@ const downloadResume = async (req, res) => {
     console.log('Downloading resume for candidate:', candidateId);
 
     const candidate = await Candidate.findById(candidateId);
-    if (!candidate || !candidate.resume?.path) {
-      console.log('Candidate or resume not found in DB');
+    if (!candidate || !candidate.fileUrl) {
+      console.log('Candidate or fileUrl not found in DB');
       return res.status(404).json({ error: 'Resume not found in database records' });
     }
 
-    const relativePath = candidate.resume.path.replace(/^\//, '');
+    const relativePath = candidate.fileUrl.replace(/^\//, ''); // remove leading slash
     const filePath = path.resolve(__dirname, '..', relativePath);
 
     console.log('Resolved file path:', filePath);
@@ -294,21 +298,13 @@ const downloadResume = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${candidate.firstName}_${candidate.lastName}_Resume${ext}"`);
 
     const fileStream = fs.createReadStream(filePath);
-
-    fileStream.on('error', (err) => {
-      console.error('File stream error:', err);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Error streaming file content' });
-      }
-    });
-
     fileStream.pipe(res);
-
   } catch (error) {
-    console.error('Download error:', error.message, error.stack); // ✅ Add full error logging
+    console.error('Download error:', error.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 
 const previewResume = async (req, res) => {

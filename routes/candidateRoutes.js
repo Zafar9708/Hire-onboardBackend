@@ -60,7 +60,9 @@ const {
   getCandidateById, 
   editCandidateById, 
   deletCandidateById, 
-  sendBulEmailToCandidate 
+  sendBulEmailToCandidate ,
+  downloadResume,
+  previewResume
 } = require('../controllers/candidateController');
 const { moveCandidateStage } = require('../controllers/stageController');
 
@@ -99,33 +101,9 @@ router.post('/send-bulk-emails', protect, sendBulEmailToCandidate);
 
 router.get('/getCandidateByJobs/:jobId', protect, candidateforParticularJob);
 
-// In your candidateRoutes.js
-router.get('/:id/resume', protect, async (req, res) => {
-  try {
-    const candidate = await Candidate.findById(req.params.id);
-    if (!candidate || !candidate.resume?.path) {
-      return res.status(404).send('Resume not found');
-    }
-    
-    const filePath = path.join(__dirname, '..', candidate.resume.path);
-    
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).send('Resume file not found');
-    }
-
-    // Set proper headers
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=${candidate.firstName}_${candidate.lastName}_Resume.pdf`);
-    
-    // Stream the file
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-});
+// Resume endpoints
+router.get('/:id/resume/download', protect, downloadResume);
+router.get('/:id/resume/preview', protect, previewResume);
 
 
 

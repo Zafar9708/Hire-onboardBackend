@@ -102,7 +102,7 @@ router.post('/send-bulk-emails', protect, sendBulEmailToCandidate);
 router.get('/getCandidateByJobs/:jobId', protect, candidateforParticularJob);
 
 // Resume endpoints
-router.get('/:id/resume/download', protect, downloadResume);
+router.get('/:id/resume/download',  downloadResume);
 router.get('/:id/resume/preview', protect, previewResume);
 
 

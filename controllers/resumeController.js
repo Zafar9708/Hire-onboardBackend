@@ -27,3 +27,14 @@ exports.getResumeById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+exports.getCandidateResume = async (req, res) => {
+  try {
+    const resume = await ResumeModel.model.findById(req.params.id);
+    if (!resume) return res.status(404).json({ error: 'Resume not found' });
+    res.json(resume);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

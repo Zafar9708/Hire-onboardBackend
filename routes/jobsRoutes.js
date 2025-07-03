@@ -6,10 +6,12 @@ const Job = require('../models/Job');
 const JobForm = require('../models/jobForm');
 const { protect } = require('../middleware/authMiddleware');
 const Counter = require('../models/Counter'); 
-const { getJobTemplates, postJob, getAllJobs, getJobDetailById, changeJobStatusById, getAllJobsByStatus,updateJob } = require('../controllers/jobController');
+const { getJobTemplates, postJob, getAllJobs, getJobDetailById, changeJobStatusById, getAllJobsByStatus,updateJob,deleteJob,deleteJobById } = require('../controllers/jobController');
 
 router.post('/', protect, postJob);
 router.put('/:id',protect, updateJob);
+router.delete('/',protect,deleteJob);
+router.delete('/:id',protect,deleteJobById)
 
 
 

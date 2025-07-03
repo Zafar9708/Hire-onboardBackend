@@ -4,6 +4,7 @@ const templates = require('../data/templates.json');
 const Counter = require('../models/Counter');
 const Job = require('../models/Job');
 const jobForm = require('../models/jobForm');
+const User = require('../models/User');
 
 const getJobTemplates = (req, res) => {
   try {
@@ -249,6 +250,23 @@ const deleteJob = async (req, res) => {
       });
     }
   };
+
+
+ const deleteJobById=async(req,res)=>{
+    const jobId=req.params.id
+    const deletedJob=await Job.findByIdAndDelete(jobId)
+    if(!deletedJob){
+        return res.status(400).json({
+            success:false,
+            message:`Job not found  with this ${jobId} not found`
+        })
+    }
+    return res.status(200).json({
+        success:true,
+        message:"Job Deleted Successfully"
+    })
+
+ }  
   
 
 module.exports = {
@@ -259,5 +277,6 @@ module.exports = {
   getJobDetailById,
   changeJobStatusById,
   updateJob,
-  deleteJob
+  deleteJob,
+  deleteJobById
 };

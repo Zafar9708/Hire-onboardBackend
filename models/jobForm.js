@@ -76,6 +76,7 @@ const jobFormSchema = new mongoose.Schema({
 
     Client: {
         type: String,
+        enum:['Vimo','Wipro','infosys',''],
         required: function () {
             return this.BusinessUnit === 'external';
         }

@@ -176,24 +176,16 @@ const {
   downloadResume,
   previewResume
 } = require('../controllers/candidateController');
+const uploadMiddleware = require('../middleware/upload');
+
 const { moveCandidateStage } = require('../controllers/stageController');
 
 
-router.post('/', 
-  upload.fields([
-    { name: 'resume', maxCount: 1 },
-    { name: 'additionalDocuments', maxCount: 5 }
-  ]), 
-  createCandidate
-);
+router.post('/', uploadMiddleware, createCandidate);
+
 
 // Update candidate with optional file uploads
-router.put('/:id', 
-  upload.fields([
-    { name: 'resume', maxCount: 1 },
-    { name: 'additionalDocuments', maxCount: 5 }
-  ]), 
-  editCandidateById
+router.put('/:id', uploadMiddleware,editCandidateById
 );
 
 router.get('/',  getAllCandidates);
@@ -201,13 +193,7 @@ router.get('/',  getAllCandidates);
 router.get('/:id',  getCandidateById);
 
 router.put(
-  '/:id',
-  upload.fields([
-    { name: 'resume', maxCount: 1 },
-    { name: 'additionalDocuments', maxCount: 5 }
-  ]),
-  editCandidateById
-);
+  '/:id',uploadMiddleware,editCandidateById);
 
 // Add the new endpoint for moving stages
 router.put('/:id/stage',  moveCandidateStage);

@@ -44,8 +44,10 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+// Create absolute path to upload directory
+const uploadDir = path.resolve(__dirname, '../uploads');
+
 // Ensure upload directory exists
-const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -57,10 +59,8 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
-    const safeFilename = file.originalname
-      .replace(ext, '')
-      .replace(/\s+/g, '_')
-      .replace(/[^a-zA-Z0-9_]/g, '');
+    const baseName = path.basename(file.originalname, ext);
+    const safeFilename = baseName.replace(/[^a-zA-Z0-9_-]/g, '');
     cb(null, `${safeFilename}-${uniqueSuffix}${ext}`);
   }
 });
@@ -78,11 +78,25 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
   storage,
-  limits: { fileSize: process.env.UPLOAD_LIMIT || 5 * 1024 * 1024 }, // 5MB
+  limits: { 
+    fileSize: parseInt(process.env.UPLOAD_LIMIT) || 5 * 1024 * 1024 // 5MB
+  },
   fileFilter
-});
+}).fields([
+  { name: 'resume', maxCount: 1 },
+  { name: 'additionalDocuments', maxCount: 5 }
+]);
 
-module.exports = {
-  upload,
-  uploadDir // Export upload directory for file operations
+// Middleware wrapper to handle errors
+const handleUpload = (req, res, next) => {
+  upload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ error: err.message });
+    } else if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    next();
+  });
 };
+
+module.exports = handleUpload;

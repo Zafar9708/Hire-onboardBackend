@@ -527,30 +527,57 @@ const { parseResume } = require('../utils/resumeParser');
 
 const createCandidate = async (req, res) => {
   try {
+    // Validate request contains files
+    if (!req.files || !req.files.resume) {
+      return res.status(400).json({ error: 'Resume file is required' });
+    }
+
     const data = req.body;
     
-    // Handle resume upload
-    if (req.files?.resume?.[0]) {
-      data.resume = {
-        path: req.files.resume[0].path,
-        originalName: req.files.resume[0].originalname
-      };
+    // Process resume file
+    const resumeFile = req.files.resume[0];
+    data.resume = {
+      path: resumeFile.path,
+      originalName: resumeFile.originalname
+    };
+
+    // Process additional documents if any
+    if (req.files.additionalDocuments) {
+      data.additionalDocuments = req.files.additionalDocuments.map(file => ({
+        path: file.path,
+        originalName: file.originalname
+      }));
+    } else {
+      data.additionalDocuments = [];
     }
-    
-    // Handle additional documents
-    data.additionalDocuments = req.files?.additionalDocuments?.map(file => ({
-      path: file.path,
-      originalName: file.originalname
-    })) || [];
 
     data.userId = req.user._id;
 
     const candidate = new Candidate(data);
-    const response = await candidate.save();
-    res.status(201).json({ message: 'Candidate saved successfully', candidate: response });
+    const savedCandidate = await candidate.save();
+    
+    res.status(201).json({
+      message: 'Candidate created successfully',
+      candidate: savedCandidate
+    });
+
   } catch (error) {
     console.error('Error creating candidate:', error);
-    res.status(500).json({ error: 'Error creating candidate', details: error.message });
+    
+    // Clean up uploaded files if error occurs
+    if (req.files) {
+      const files = [...(req.files.resume || []), ...(req.files.additionalDocuments || [])];
+      files.forEach(file => {
+        if (file.path) {
+          fs.unlink(file.path, () => {});
+        }
+      });
+    }
+
+    res.status(500).json({ 
+      error: 'Failed to create candidate',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

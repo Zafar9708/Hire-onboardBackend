@@ -13,8 +13,7 @@
 // utils/departments.js
 
 let departments = [
-  'QA', 'Developer', 'Tester', 'UI/UX', 'DevOps', 'Sales', 'Finance',
-  'Customer Support', 'Product', 'Design', 'Legal', 'Operationn'
+  'IT','NON-IT','Sales','IT Operation'
 ];
 
 const getDepartments = () => departments;

@@ -61,8 +61,8 @@ const {
   editCandidateById, 
   deletCandidateById, 
   sendBulEmailToCandidate ,
-  downloadResume,
-  previewResume
+  // downloadResume,
+  // previewResume
 } = require('../controllers/candidateController');
 const { moveCandidateStage } = require('../controllers/stageController');
 
@@ -78,7 +78,7 @@ router.post(
 
 router.get('/', protect, getAllCandidates);
 
-router.get('/:id', protect, getCandidateById);
+router.get('/:id',  getCandidateById);
 
 router.put(
   '/:id',
@@ -102,8 +102,8 @@ router.post('/send-bulk-emails', protect, sendBulEmailToCandidate);
 router.get('/getCandidateByJobs/:jobId', protect, candidateforParticularJob);
 
 // Resume endpoints
-router.get('/:id/resume/download', downloadResume);
-router.get('/:id/resume/preview', protect, previewResume);
+// router.get('/:id/resume/download', downloadResume);
+// router.get('/:id/resume/preview', protect, previewResume);
 
 
 

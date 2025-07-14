@@ -6,12 +6,18 @@ const Job = require('../models/Job');
 const JobForm = require('../models/jobForm');
 const { protect } = require('../middleware/authMiddleware');
 const Counter = require('../models/Counter'); 
-const { getJobTemplates, postJob, getAllJobs, getJobDetailById, changeJobStatusById, getAllJobsByStatus,updateJob,deleteJob,deleteJobById } = require('../controllers/jobController');
+const { getJobTemplates, postJob, getAllJobs, getJobDetailById, changeJobStatusById, getAllJobsByStatus,updateJob,deleteJob,deleteJobById,getLocation,addLocation } = require('../controllers/jobController');
 
+
+// Add these to your job routes
+router.get('/job-forms/locations', getLocation);
+router.post('/job-forms/locations', addLocation);
 router.post('/', protect, postJob);
 router.put('/:id',protect, updateJob);
 router.delete('/',protect,deleteJob);
-router.delete('/:id',protect,deleteJobById)
+router.delete('/:id',protect,deleteJobById),
+router.patch('/:id/status', changeJobStatusById);
+
 
 
 
@@ -21,9 +27,10 @@ router.get('/byStatus/:status', protect, getAllJobsByStatus);
 router.get('/byId/:id', getJobDetailById); 
 
 
-router.patch('/:id', protect, changeJobStatusById);
+// router.patch('/:id', protect, changeJobStatusById);
 
 router.get('/jobTemplates',protect,getJobTemplates)
+
 
 
 // router.patch('/:id/archive', protect, async (req, res) => {

@@ -2,6 +2,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const axios = require('axios');
+const path=require('path')
+
 
 
 const dotenv = require('dotenv');
@@ -22,6 +24,10 @@ const remarkRoutes = require('./routes/remarks');
 const jobStatusRoutes = require('./routes/jobStatus');
 const employeeRoutes=require('./routes/employeeRoutes')
 const stageRoutes = require('./routes/stageRoutes');
+const emailRoutes=require('./routes/emailRoutes')
+const feedbackRoutes = require('./routes/feedbackRoutes');
+const noteRoutes = require('./routes/noteRoutes');
+
 
 
 
@@ -40,7 +46,7 @@ app.use(errorHandler);
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 
@@ -52,6 +58,8 @@ app.use('/api/jobform', jobFormRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/resumes', resumeRoutes);
 app.use('/api/stages', stageRoutes);
+app.use('/api', emailRoutes);
+app.use('/api/notes', noteRoutes);
 
 
 
@@ -72,6 +80,14 @@ app.use('/api/stages', candidateStageRoutes);
 app.use('/api/remarks', remarkRoutes);
 
 app.use('/api/job-status', jobStatusRoutes);
+app.use('/api/feedback', feedbackRoutes);
+
+
+app.use(cors({
+  origin: 'http://localhost:5173', 
+  credentials: true
+}));
+
 
 
 

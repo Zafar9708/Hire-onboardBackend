@@ -136,10 +136,6 @@
 //-----------
 
 const { transporter } = require('../config/email');
-const path = require('path');
-const fs = require('fs');
-
-
 const Candidate = require('../models/Candidate');
 const { parseResume } = require('../utils/resumeParser');
 
@@ -184,15 +180,22 @@ const getAllCandidates = async (req, res) => {
 
 const getCandidateById = async (req, res) => {
   try {
-    const candidate = await Candidate.findOne({ _id: req.params.id});
-    if (!candidate) 
-    return res.status(404).json({ error: 'Candidate not found' });
+    const candidate = await Candidate.findOne({ _id: req.params.id })
+      .populate('stage', 'name')
+      .populate('jobId', 'jobTitle')
+      .populate('userId', 'name');
+
+    if (!candidate) {
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
+
     res.json(candidate);
   } catch (error) {
     console.error('Error fetching candidate:', error);
     res.status(500).json({ error: 'Error fetching candidate with id' });
   }
-}
+};
+
 
 const editCandidateById = async (req, res) => {
   try {
@@ -267,105 +270,6 @@ const candidateforParticularJob = async (req, res) => {
 
 }
 
-const downloadResume = async (req, res) => {
-  try {
-    const candidateId = req.params.id;
-    const candidate = await Candidate.findById(candidateId);
-
-    if (!candidate || !candidate.resume?.path) {
-      return res.status(404).json({ error: 'Resume not found in database records' });
-    }
-
-    // Normalize path (remove leading slashes)
-    const relativePath = candidate.resume.path.replace(/^\//, '');
-    const filePath = path.resolve(__dirname, '..', relativePath); // Goes up from `controllers/` to project root
-
-    // Debug: Log paths
-    console.log("Resume path from DB:", candidate.resume.path);
-    console.log("Resolved file path:", filePath);
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      console.error("File not found. Checked path:", filePath);
-      return res.status(404).json({ error: 'Resume file not found on server' });
-    }
-
-    // Set headers and stream the file
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = {
-      '.pdf': 'application/pdf',
-      '.doc': 'application/msword',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    }[ext] || 'application/octet-stream';
-
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${candidate.firstName}_${candidate.lastName}_Resume${ext}"`);
-
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
-  } catch (error) {
-    console.error('Download error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-
-
-const previewResume = async (req, res) => {
-  try {
-    // 1. Verify candidate exists with resume
-    const candidate = await Candidate.findById(req.params.id);
-    if (!candidate || !candidate.resume?.path) {
-      return res.status(404).json({ 
-        error: 'Resume not found in database records' 
-      });
-    }
-
-    // 2. Construct absolute file path (remove any leading slashes)
-    const relativePath = candidate.resume.path.replace(/^\//, '');
-    const filePath = path.resolve(__dirname, '..', relativePath);
-
-    // 3. Verify file exists
-    if (!fs.existsSync(filePath)) {
-      console.error(`File not found at path: ${filePath}`);
-      return res.status(404).json({ 
-        error: 'Resume file not found on server' 
-      });
-    }
-
-    // 4. Only allow PDF previews
-    const ext = path.extname(filePath).toLowerCase();
-    if (ext !== '.pdf') {
-      return res.status(400).json({ 
-        error: 'Only PDF files can be previewed' 
-      });
-    }
-
-    // 5. Stream file with proper headers
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${candidate.firstName}_${candidate.lastName}_Resume.pdf"`);
-    
-    const fileStream = fs.createReadStream(filePath);
-    
-    fileStream.on('error', (err) => {
-      console.error('File stream error:', err);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Error streaming file content' });
-      }
-    });
-
-    fileStream.pipe(res);
-    
-  } catch (error) {
-    console.error('Preview error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-
 module.exports = {
   createCandidate,
   getAllCandidates,
@@ -373,7 +277,5 @@ module.exports = {
   editCandidateById,
   deletCandidateById,
   sendBulEmailToCandidate,
-  candidateforParticularJob,
-  downloadResume,
-  previewResume
+  candidateforParticularJob
 };

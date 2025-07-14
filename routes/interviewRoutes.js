@@ -19,11 +19,15 @@ router.get('/interviews/sschedule/:id', interviewController.getInterviewById);
 
 router.get('/interviews/upcoming', interviewController.getUpcomingInterviews);
 
+router.get('/interviews', interviewController.getAllInterviews);
+router.get('/interviews/:id',  interviewController.getInterviewById);
+
 router.post('/interviewers', interviewerController.createInterviewer);
 router.get('/interviewers', interviewerController.getAllInterviewers);
 
 router.post('/email-templates', emailTemplateController.createTemplate);
 router.get('/email-templates', emailTemplateController.getAllTemplates);
+
 
 router.get('/jobs/:jobId', async (req, res) => {
     try {

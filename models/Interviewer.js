@@ -5,6 +5,7 @@ const interviewerSchema = new mongoose.Schema({
         type: String, 
         required: [true, 'Interviewer name is required'] 
     },
+
     email: { 
         type: String, 
         required: [true, 'Email is required'],

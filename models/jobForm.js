@@ -49,7 +49,7 @@ const mongoose = require('mongoose');
 
 const jobFormSchema = new mongoose.Schema({
     jobType: { type: String, required: true },
-    location: { type: String, required: true },
+    location: { type: [String], required: true },
     openings: { type: Number, required: true },
     targetHireDate: { type: Date, required: true },
     currency: { type: String, required: true },
@@ -76,11 +76,20 @@ const jobFormSchema = new mongoose.Schema({
 
     Client: {
         type: String,
-        enum:['Vimo','Wipro','infosys',''],
+        enum:['Vimo','Wipro','infosys','BB'],
         required: function () {
             return this.BusinessUnit === 'external';
         }
-    }
+    },
+    status: {
+        type: String,
+        enum: ['Active', 'On Hold', 'Closed Own', 'Closed Lost', 'Archived'],
+        default: 'Active'
+      },
+      statusReason: {
+        type: String,
+        default: ''
+      },
 });
 
 module.exports = mongoose.model('JobForm', jobFormSchema);

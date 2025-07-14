@@ -1,26 +1,30 @@
-// scripts/seedStages.js
 const mongoose = require('mongoose');
 const Stage = require('../models/Stages');
-const { stages } = require('../utils/stages'); // ✅ FIXED HERE
+const { stages, rejectionTypes } = require('../utils/stages');
 
-const MONGO_URI = 'mongodb+srv://zafarekhlaque9708:93045@hireonboard.brlsozu.mongodb.net/?retryWrites=true&w=majority&appName=HireOnboard'; 
+const MONGO_URI = 'mongodb://localhost:27017/hire';
 
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => {
-  console.log('✅ Connected to MongoDB');
-  insertStages();
-}).catch((err) => {
-  console.error('❌ DB connection error:', err);
-});
+mongoose.connect(MONGO_URI)
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+    insertStages();
+  })
+  .catch((err) => {
+    console.error('❌ DB connection error:', err);
+  });
 
 async function insertStages() {
   try {
-    for (const name of stages) {
+    for (let i = 0; i < stages.length; i++) {
+      const name = stages[i];
+
       await Stage.findOneAndUpdate(
         { name },
-        { name },
+        {
+          name,
+          order: i + 1,
+          rejectionTypes, // optional, or keep default
+        },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
     }

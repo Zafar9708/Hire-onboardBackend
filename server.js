@@ -79,7 +79,7 @@ app.use('/api/feedback', feedbackRoutes);
 
 
 app.use(cors({
-  origin: 'https://hire-onboard.vercel.app/', 
+  origin: 'https://hire-onboard.vercel.app', 
   credentials: true
 }));
 

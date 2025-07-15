@@ -27,11 +27,8 @@ const stageRoutes = require('./routes/stageRoutes');
 const emailRoutes=require('./routes/emailRoutes')
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const noteRoutes = require('./routes/noteRoutes');
-
-
-
-
-
+const candidateNoteRoutes = require('./routes/candidateNoteRoutes');
+const candidateCommentsRoutes = require('./routes/candidateComments');
 
 
 
@@ -60,10 +57,8 @@ app.use('/api/resumes', resumeRoutes);
 app.use('/api/stages', stageRoutes);
 app.use('/api', emailRoutes);
 app.use('/api/notes', noteRoutes);
-
-
-
-
+app.use('/api/candidate-notes', candidateNoteRoutes);
+app.use('/api/candidate-comments', candidateCommentsRoutes);
 
 //for interviews
 app.use('/api', interviewRoutes);

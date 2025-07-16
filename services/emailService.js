@@ -343,6 +343,8 @@ const sendSalesPersonNotification = async (to, jobDetails) => {
 
 const sendFeedbackEmail = async (to, interview, feedback, interviewer) => {
     try {
+        const frontendURL = process.env.FRONTEND_URL;
+
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to,
@@ -390,15 +392,24 @@ const sendFeedbackEmail = async (to, interview, feedback, interviewer) => {
                             <td style="padding: 8px; border: 1px solid #ddd;">${feedback.culturalFit}/5</td>
                         </tr>
                     </table>
-                    
+
                     <h4 style="color: #3a5169;">Overall Feedback</h4>
                     <p style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${feedback.overallFeedback}</p>
-                    
+
                     ${feedback.additionalComments ? `
-                    <h4 style="color: #3a5169;">Additional Comments</h4>
-                    <p style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${feedback.additionalComments}</p>
+                        <h4 style="color: #3a5169;">Additional Comments</h4>
+                        <p style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${feedback.additionalComments}</p>
                     ` : ''}
-                    
+
+                    ${frontendURL ? `
+                        <h3 style="color: #3a5169;">Candidate Feedback Page</h3>
+                        <p style="padding: 10px;">
+                            <a href="${frontendURL}/feedback/${feedback.jobId}/${feedback.candidateId}" target="_blank" style="color: #1a73e8;">
+                                Click here to view candidate feedback summary
+                            </a>
+                        </p>
+                    ` : ''}
+
                     <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                         <p>Best regards,</p>
                         <p>Interview Team</p>
@@ -408,13 +419,14 @@ const sendFeedbackEmail = async (to, interview, feedback, interviewer) => {
         };
 
         await transporter.sendMail(mailOptions);
-        console.log(`Feedback email sent to ${to}`);
+        console.log(`✅ Feedback email sent to ${to}`);
         return true;
     } catch (error) {
         console.error('Error sending feedback email:', error);
         throw error;
     }
 };
+
 
 module.exports = { 
     sendInterviewEmail, 

@@ -95,6 +95,8 @@
 const path = require('path');
 const fs = require('fs');
 const Candidate = require('../models/Candidate');
+const ResumeModel = require('../models/resumeModel');
+
 
 
 

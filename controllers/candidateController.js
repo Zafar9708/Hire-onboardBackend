@@ -9,26 +9,35 @@ const mongoose=require('mongoose')
 const createCandidate = async (req, res) => {
   try {
     const data = req.body;
+    const uploadedFile = req.file; // Now using single file upload
 
-    const uploadedFile = req.files?.resume?.[0];
     if (uploadedFile) {
-      data.resume = {
-        url: uploadedFile.path, // Cloudinary returns the file URL here
-        originalName: uploadedFile.originalname
-      };
+      // Upload resume first
+      const resume = await Resume.parseAndSave({
+        path: uploadedFile.path,
+        filename: uploadedFile.filename,
+        mimetype: uploadedFile.mimetype,
+        originalname: uploadedFile.originalname
+      });
+
+      data.resume = resume._id;
     }
 
-    data.additionalDocuments = req.files?.additionalDocuments || [];
     data.userId = req.user._id;
-
     const candidate = new Candidate(data);
     const response = await candidate.save();
 
-    console.log("Candidate saved successfully:", response);
-    res.status(201).json({ msg: "Candidate saved!", response });
+    res.status(201).json({ 
+      success: true,
+      message: "Candidate saved successfully",
+      candidate: response 
+    });
   } catch (error) {
-    console.error(' Error creating candidate:', error);
-    res.status(500).json({ error: 'Error Creating candidate' });
+    console.error('Error creating candidate:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || 'Error creating candidate' 
+    });
   }
 };
 

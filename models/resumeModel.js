@@ -191,6 +191,7 @@ const ResumeSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+const Resume = mongoose.model('Resume', ResumeSchema);
 
 class ResumeModel {
   static async extractText(file) {

@@ -84,19 +84,16 @@ exports.uploadResume = async (req, res) => {
 
     const candidateId = req.body.candidateId || req.user._id;
     
-    // Use ResumeModel to parse and save
-    const resume = await ResumeModel.parseAndSave({
-      buffer: req.file.buffer,
-      originalname: req.file.originalname,
-      mimetype: req.file.mimetype
-    }, candidateId);
+    const resumeData = {
+      candidateId,
+      url: req.file.cloudinary.url,
+      cloudinaryId: req.file.cloudinary.public_id,
+      fileType: req.file.mimetype,
+      originalName: req.file.originalname
+    };
 
-    // Verify resume was created
-    if (!resume || !resume._id) {
-      throw new Error('Failed to create resume document');
-    }
-
-    // Update candidate with resume reference
+    const resume = await Resume.create(resumeData);
+    
     await Candidate.findByIdAndUpdate(
       candidateId,
       { resume: resume._id },
@@ -108,7 +105,7 @@ exports.uploadResume = async (req, res) => {
       message: 'Resume uploaded successfully',
       resume: {
         id: resume._id,
-        url: resume.fileUrl,  // Changed from resume.url to resume.fileUrl
+        url: resume.url,
         candidateId: resume.candidateId
       }
     });
@@ -116,7 +113,6 @@ exports.uploadResume = async (req, res) => {
   } catch (err) {
     console.error('Upload error:', err);
     
-    // Clean up Cloudinary upload if it succeeded but database failed
     if (req.file?.cloudinary?.public_id) {
       await cloudinary.uploader.destroy(req.file.cloudinary.public_id)
         .catch(cleanupErr => console.error('Cleanup error:', cleanupErr));
@@ -124,7 +120,8 @@ exports.uploadResume = async (req, res) => {
     
     res.status(500).json({
       success: false,
-      error: err.message || 'Failed to upload resume'
+      error: 'Failed to upload resume',
+      message: err.message
     });
   }
 };

@@ -242,53 +242,46 @@ class ResumeModel {
     }
   }
 
-  static async parseAndSave(file, candidateId = null) {
-    try {
-      // Upload to Cloudinary first
-      const { url, publicId } = await this.uploadToCloudinary(file);
-      
-      // Extract text content
-      const text = await this.extractText(file);
-      console.log('Extracted text sample:', text.substring(0, 200));
+  // In your ResumeModel class, update the parseAndSave method:
 
-      // Parse resume data
-      const { firstName, middleName, lastName } = this.extractName(text);
-      const email = this.extractEmail(text);
-      
-      if (!email) {
-        throw new Error('No valid email found in resume');
-      }
+static async parseAndSave(file, candidateId = null) {
+  try {
+    // Upload to Cloudinary first
+    const { url, publicId } = await this.uploadToCloudinary(file);
+    
+    // Extract text content
+    const text = await this.extractText(file);
 
-      const parsedData = {
-        firstName,
-        middleName,
-        lastName,
-        email,
-        phone: this.extractPhone(text),
-        skills: this.cleanSkills(extractSkills(text)),
-        experience: extractExperience(text) || this.extractExperienceFromText(text),
-        education: this.extractEducation(text) || this.extractEducationFromText(text),
-        fileUrl: url,
-        cloudinaryId: publicId,
-        fileType: file.mimetype,
-        candidateId
-      };
+    // Parse resume data
+    const parsedData = {
+      firstName: this.extractName(text).firstName,
+      middleName: this.extractName(text).middleName,
+      lastName: this.extractName(text).lastName,
+      email: this.extractEmail(text),
+      phone: this.extractPhone(text),
+      skills: this.cleanSkills(extractSkills(text)),
+      experience: extractExperience(text) || this.extractExperienceFromText(text),
+      education: this.extractEducation(text) || this.extractEducationFromText(text),
+      fileUrl: url,
+      cloudinaryId: publicId,
+      fileType: file.mimetype,
+      candidateId
+    };
 
-      const resume = new Resume(parsedData);
-      await resume.save();
-      
-      return resume;
-    } catch (err) {
-      console.error('Parse and save error:', err);
-      
-      // Clean up Cloudinary upload if parsing failed
-      if (err.cloudinaryId) {
-        await cloudinary.uploader.destroy(err.cloudinaryId);
-      }
-      
-      throw err;
+    // Create and save the resume document
+    const resume = new this.model(parsedData);
+    await resume.save();
+    
+    return resume;
+
+  } catch (err) {
+    console.error('Parse and save error:', err);
+    if (publicId) {
+      await cloudinary.uploader.destroy(publicId);
     }
+    throw err;
   }
+}
 
   static cleanSkills(skillsString) {
     if (!skillsString) return [];

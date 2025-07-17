@@ -13,7 +13,7 @@ const createCandidate = async (req, res) => {
     const uploadedFile = req.files?.resume?.[0];
     if (uploadedFile) {
       data.resume = {
-        path: uploadedFile.path, 
+        url: uploadedFile.path, // Cloudinary returns the file URL here
         originalName: uploadedFile.originalname
       };
     }

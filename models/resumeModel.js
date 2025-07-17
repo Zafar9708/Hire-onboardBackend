@@ -191,7 +191,6 @@ const ResumeSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-const Resume = mongoose.model('Resume', ResumeSchema);
 
 class ResumeModel {
   static async extractText(file) {
@@ -242,147 +241,84 @@ class ResumeModel {
     }
   }
 
-  // In your ResumeModel class, update the parseAndSave method:
 
-static async parseAndSave(file, candidateId = null) {
-  try {
-    // Upload to Cloudinary first
-    const { url, publicId } = await this.uploadToCloudinary(file);
-    
-    // Extract text content
-    const text = await this.extractText(file);
+  static async parseAndSave(file) {
+    try {
+      const text = await this.extractText(file);
+      console.log('Extracted text:', text.substring(0, 200));
 
-    // Parse resume data
-    const parsedData = {
-      firstName: this.extractName(text).firstName,
-      middleName: this.extractName(text).middleName,
-      lastName: this.extractName(text).lastName,
-      email: this.extractEmail(text),
-      phone: this.extractPhone(text),
-      skills: this.cleanSkills(extractSkills(text)),
-      experience: extractExperience(text) || this.extractExperienceFromText(text),
-      education: this.extractEducation(text) || this.extractEducationFromText(text),
-      fileUrl: url,
-      cloudinaryId: publicId,
-      fileType: file.mimetype,
-      candidateId
-    };
+      const { firstName, middleName, lastName } = this.extractName(text);
 
-    // Create and save the resume document
-    const resume = new this.model(parsedData);
-    await resume.save();
-    
-    return resume;
+      const parsedData = {
+        firstName,
+        middleName,
+        lastName,
+        email: this.extractEmail(text),
+        phone: this.extractPhone(text),
+        skills: extractSkills(text).split(', '),
+        experience: extractExperience(text),
+        education: this.extractEducation(text),
+        fileUrl: `/uploads/${file.originalname}`
+      };
 
-  } catch (err) {
-    console.error('Parse and save error:', err);
-    if (publicId) {
-      await cloudinary.uploader.destroy(publicId);
+      if (!parsedData.email) throw new Error('No email found in resume');
+
+      const resume = new Resume(parsedData);
+      return await resume.save();
+    } catch (err) {
+      console.error('Parse error:', err);
+      throw err;
     }
-    throw err;
-  }
-}
-
-  static cleanSkills(skillsString) {
-    if (!skillsString) return [];
-    return skillsString.split(',')
-      .map(skill => skill.trim())
-      .filter(skill => skill.length > 0);
   }
 
   static extractName(text) {
-    const lines = text.split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-
-    // Try to find name near email
+    const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
     const email = this.extractEmail(text);
-    if (email) {
-      const emailLineIndex = lines.findIndex(line => line.includes(email));
-      if (emailLineIndex > 0) {
-        const possibleName = lines[emailLineIndex - 1]
-          .replace(/\t+/g, ' ')
-          .replace(/[^a-zA-Z\s-]/g, '')
-          .trim();
-        
-        const nameParts = possibleName.split(/\s+/);
-        if (nameParts.length >= 2) {
-          return {
-            firstName: nameParts[0],
-            middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '',
-            lastName: nameParts[nameParts.length - 1]
-          };
-        }
+    const emailLineIndex = lines.findIndex(line => line.includes(email));
+  
+    let fullName = '';
+    if (emailLineIndex > 0) {
+      const possibleName = lines[emailLineIndex - 1].replace(/\t+/g, ' ').trim();
+      const nameMatch = possibleName.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)$/);
+      if (nameMatch) {
+        fullName = nameMatch[0];
       }
     }
-
-    // Fallback to first line if no email or name not found near email
-    const firstLine = lines[0]
-      .replace(/\t+/g, ' ')
-      .replace(/[^a-zA-Z\s-]/g, '')
-      .trim();
-    
-    const nameParts = firstLine.split(/\s+/);
-    return {
-      firstName: nameParts[0] || '',
-      middleName: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '',
-      lastName: nameParts.length > 1 ? nameParts[nameParts.length - 1] : ''
-    };
+  
+    if (!fullName) {
+      fullName = lines[0].replace(/\t+/g, ' ').trim();
+    }
+  
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0] || '';
+    const middleName = nameParts.length === 3 ? nameParts[1] : '';
+    const lastName = nameParts[nameParts.length - 1] || '';
+  
+    return { firstName, middleName, lastName };
   }
-
+  
+  
+  
   static extractEmail(text) {
-    const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
-    const emails = text.match(emailRegex);
-    if (!emails || emails.length === 0) return '';
-    
-    // Return the first email that looks like a personal email (not example.com, test.com, etc.)
-    const personalEmail = emails.find(email => 
-      !email.includes('example') && 
-      !email.includes('test') &&
-      !email.includes('domain')
-    );
-    
-    return personalEmail || emails[0];
+    const emailMatch = text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/);
+    return emailMatch ? emailMatch[0] : '';
   }
+  
 
   static extractPhone(text) {
-    const phoneRegex = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
-    const phones = text.match(phoneRegex);
-    return phones ? phones[0] : '';
+    const phoneMatch = text.match(/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+    return phoneMatch ? phoneMatch[0] : '';
   }
 
-  static extractExperienceFromText(text) {
-    const experiencePatterns = [
-      /(\d+)\s*\+?\s*(years|yrs|year)/i,
-      /experience\s*:\s*(\d+\s*[a-z]+)/i,
-      /(\d+)\s*-\s*(\d+)\s*years/i
-    ];
-    
-    for (const pattern of experiencePatterns) {
-      const match = text.match(pattern);
-      if (match) {
-        return match[0];
-      }
-    }
-    
-    return '';
+  static extractExperience(text) {
+    const match = text.match(/(\d{1,2})\s*\+?\s*(years|yrs)/i);
+    return match ? `${match[1]} years` : '';
   }
+  
 
-  static extractEducationFromText(text) {
-    const educationPatterns = [
-      /(Bachelor|B\.?Sc|B\.?Tech|B\.?E|B\.?A|Master|M\.?Sc|M\.?Tech|M\.?E|M\.?A|PhD|Doctorate)[^\n]*/i,
-      /(University|College|Institute)[^\n]*/i,
-      /(Education|Qualification)[^\n:]*:\s*([^\n]+)/i
-    ];
-    
-    for (const pattern of educationPatterns) {
-      const match = text.match(pattern);
-      if (match) {
-        return match[0].trim();
-      }
-    }
-    
-    return '';
+  static extractEducation(text) {
+    const match = text.match(/(B\.?Tech|M\.?Tech|Bachelor|Master|BSc|MSc|BE)[^\n]*/i);
+    return match ? match[0] : '';
   }
 }
 

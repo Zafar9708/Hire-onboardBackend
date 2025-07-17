@@ -10,8 +10,8 @@ const {
   updateNote
 } = require('../controllers/noteController');
 
-router.post('/:jobId', protect, createNote);      // Create note
-router.get('/:jobId', protect, getNotesByJob);    // Get notes for a job
+router.post('/:jobId', protect, createNote);      
+router.get('/:jobId', protect, getNotesByJob);    
 router.delete('/:noteId', protect, deleteNote); 
 router.put('/:noteId', protect, updateNote);
 

@@ -11,7 +11,7 @@ exports.getCandidateComments = async (req, res) => {
 
     const comments = candidate.comments?.map(comment => ({
       text: comment.text,
-      date: comment.date || comment.changedAt, // use fallback if date missing
+      date: comment.date || comment.changedAt, 
     })) || [];
 
     res.json({ comments });

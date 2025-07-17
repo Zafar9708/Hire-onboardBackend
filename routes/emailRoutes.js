@@ -1,4 +1,3 @@
-// Add this to your routes file (e.g., routes/emailRoutes.js)
 const express = require('express');
 const router = express.Router();
 const { sendSalesPersonNotification } = require('../services/emailService');

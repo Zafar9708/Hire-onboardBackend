@@ -30,7 +30,6 @@ const scheduleInterview = async (req, res) => {
             jobId
         } = req.body;
 
-        // Validate required fields
         if (!candidate || !interviewerIds || !date || !startTime || !duration || 
             !timezone || !platform || !templateId || !scheduledBy) {
             return res.status(400).json({
@@ -39,7 +38,6 @@ const scheduleInterview = async (req, res) => {
             });
         }
 
-        // Validate ObjectId formats
         if (!Array.isArray(interviewerIds) || !interviewerIds.every(isValidObjectId) || 
             !isValidObjectId(templateId)) {
             return res.status(400).json({
@@ -48,7 +46,6 @@ const scheduleInterview = async (req, res) => {
             });
         }
 
-        // Verify interviewers exist
         const interviewers = await Interviewer.find({ 
             _id: { $in: interviewerIds } 
         });
@@ -60,7 +57,6 @@ const scheduleInterview = async (req, res) => {
             });
         }
 
-        // Verify template exists
         const template = await EmailTemplate.findById(templateId);
         if (!template) {
             return res.status(400).json({
@@ -69,7 +65,6 @@ const scheduleInterview = async (req, res) => {
             });
         }
 
-        // Create meeting link
         let meetingLink;
         try {
             const meetingDetails = {
@@ -102,7 +97,6 @@ const scheduleInterview = async (req, res) => {
             });
         }
 
-        // Format email body with placeholders
         const formattedDate = new Date(date).toLocaleDateString();
         let emailBody = template.body
         .replace(/{candidate}/g, candidate.name)
@@ -111,12 +105,9 @@ const scheduleInterview = async (req, res) => {
         .replace(/{duration}/g, duration)
         .replace(/{timezone}/g, timezone)
         .replace(/{platform}/g, platform)
-        // Remove the meeting link from template since we'll add it in sendInterviewEmail
         .replace(/Meeting Link: [^\n]*\n?/g, '')
-        // Remove any existing signatures
         .replace(/Best regards,[\s\S]*?(Tech Team|Interview Team|HR Team)/g, '');
 
-        // Create interview record
         const interview = new Interview({
             candidate,
             interviewers: interviewerIds,
@@ -136,7 +127,6 @@ const scheduleInterview = async (req, res) => {
 
         await interview.save();
 
-        // Generate feedback links and send emails
         try {
             const feedbackLinks = interviewers.map(interviewer => ({
                 interviewerId: interviewer._id,
@@ -146,17 +136,15 @@ const scheduleInterview = async (req, res) => {
             console.log('Generated feedback links:', feedbackLinks);
 
             const emailPromises = [
-                // Email to candidate
                 sendInterviewEmail(
                     candidate.email,
                     template.subject,
                     emailBody,
                     meetingLink,
-                    'N/A', // No feedback link for candidate
-                    candidate.name, // Recipient name
-                    'technical' // Default to technical, adjust as needed
+                    'N/A', 
+                    candidate.name, 
+                    'technical' 
                 ),
-                // Emails to interviewers
                 ...interviewers.map(interviewer => {
                     const feedbackLink = feedbackLinks.find(link => 
                         link.interviewerId.toString() === interviewer._id.toString()
@@ -168,8 +156,8 @@ const scheduleInterview = async (req, res) => {
                         emailBody.replace(/{interviewer}/g, interviewer.name),
                         meetingLink,
                         feedbackLink,
-                        interviewer.name, // Recipient name
-                        'technical' // Default to technical, adjust as needed
+                        interviewer.name,
+                        'technical' 
                     );
                 })
             ];
@@ -178,7 +166,6 @@ const scheduleInterview = async (req, res) => {
             console.log('All emails sent successfully');
         } catch (emailError) {
             console.error('Email sending error:', emailError);
-            // Don't fail the whole operation if emails fail
         }
 
         res.status(201).json({

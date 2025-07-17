@@ -62,10 +62,8 @@ exports.getAllUser = async (req, res) => {
   const result = await User.find()
 
   console.log("sfhbsjbnj,s",result)
-  // throw new Error("lndskc");
   
   res.json({
     user: result,
-    // email: user.email
   });
 }

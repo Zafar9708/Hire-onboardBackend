@@ -3,25 +3,8 @@
 const { transporter } = require('../config/email');
 const Candidate = require('../models/Candidate');
 const { parseResume } = require('../utils/resumeParser');
+const mongoose=require('mongoose')
 
-// const createCandidate = async (req, res) => {
-//   try {
-//     const data = req.body;
-//     data.resume = req.files?.resume?.[0] || null;
-//     data.additionalDocuments = req.files?.additionalDocuments || [];
-//     data.userId = req.user._id;
-
-//     const candidate = new Candidate(data);
-//     const response = await candidate.save();
-//     console.log("candidate saved succesfully",response)
-//     res.status(201).json({msg:"Candidate saved!",response});
-//   } catch (error) {
-//     console.error('Error creating candidate:', error);
-//     res.status(500).json({ error: 'Error Creating candidate' });
-//   }
-// };
-
-//--this is for uploading resume on server
 
 const createCandidate = async (req, res) => {
   try {
@@ -163,6 +146,117 @@ const candidateforParticularJob = async (req, res) => {
 
 }
 
+const getCandidateStageHistory = async (req, res) => {
+  try {
+    const candidates = await Candidate.find()
+      .populate('stage', 'name')        // populate stage name
+      .populate('jobId', 'jobTitle')    // populate job title
+      .populate('userId', 'name');      // populate user name
+
+    const result = candidates.map((candidate) => {
+      const history = [];
+      let currentStageDate = null;
+
+      // Sort comments by change date
+      const sortedComments = [...candidate.comments].sort(
+        (a, b) => new Date(a.changedAt) - new Date(b.changedAt)
+      );
+
+      sortedComments.forEach((comment) => {
+        if (comment.stageChangedTo) {
+          history.push({
+            from: comment.stageChangedFrom || "Unknown",
+            to: comment.stageChangedTo,
+            changedAt: comment.changedAt,
+          });
+
+          // Track when the candidate entered their current stage
+          if (
+            comment.stageChangedTo === candidate.stage?.name &&
+            (!currentStageDate || new Date(comment.changedAt) > new Date(currentStageDate))
+          ) {
+            currentStageDate = comment.changedAt;
+          }
+        }
+      });
+
+      return {
+        candidateId: candidate._id,
+        name: `${candidate.firstName} ${candidate.middleName || ""} ${candidate.lastName}`.trim(),
+        currentStage: candidate.stage?.name || "Not Assigned",
+        currentStageSince: currentStageDate,
+        jobTitle: candidate.jobId?.jobTitle || "N/A",
+        history,
+      };
+    });
+
+    res.status(200).json({
+      message: "Candidate stage history fetched successfully",
+      candidates: result,
+    });
+  } catch (error) {
+    console.error("Error in getCandidateStageHistory:", error);
+    res.status(500).json({ error: "Failed to fetch candidate stage history" });
+  }
+};
+
+const getStageByCandidateId = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid candidate ID format" });
+    }
+
+    const candidate = await Candidate.findById(id)
+      .populate('stage', 'name')
+      .populate('jobId', 'jobTitle')
+      .populate('userId', 'name');
+
+    if (!candidate) {
+      return res.status(404).json({ error: "Candidate not found" });
+    }
+
+    // Sort comments by date
+    const sortedComments = [...candidate.comments].sort(
+      (a, b) => new Date(a.changedAt) - new Date(b.changedAt)
+    );
+
+    let currentStageDate = null;
+    const history = [];
+
+    sortedComments.forEach((comment) => {
+      if (comment.stageChangedTo) {
+        history.push({
+          from: comment.stageChangedFrom || "Unknown",
+          to: comment.stageChangedTo,
+          changedAt: comment.changedAt,
+        });
+
+        if (
+          comment.stageChangedTo === candidate.stage?.name &&
+          (!currentStageDate || new Date(comment.changedAt) > new Date(currentStageDate))
+        ) {
+          currentStageDate = comment.changedAt;
+        }
+      }
+    });
+
+    res.status(200).json({
+      candidateId: candidate._id,
+      name: `${candidate.firstName} ${candidate.middleName || ''} ${candidate.lastName}`.trim(),
+      jobTitle: candidate.jobId?.jobTitle || 'N/A',
+      currentStage: candidate.stage?.name || 'Not Assigned',
+      currentStageSince: currentStageDate,
+      history,
+    });
+  } catch (error) {
+    console.error("Error getting stage by candidate ID:", error);
+    res.status(500).json({ error: "Failed to fetch stage info" });
+  }
+};
+
+
 module.exports = {
   createCandidate,
   getAllCandidates,
@@ -170,5 +264,7 @@ module.exports = {
   editCandidateById,
   deletCandidateById,
   sendBulEmailToCandidate,
-  candidateforParticularJob
+  candidateforParticularJob,
+  getCandidateStageHistory,
+  getStageByCandidateId
 };

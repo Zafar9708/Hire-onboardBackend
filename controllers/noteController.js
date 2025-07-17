@@ -1,7 +1,6 @@
 const Job = require('../models/Job');
 const Note =require('../models/Notes')
 
-// Create a new note for a job
 exports.createNote = async (req, res) => {
     try {
       const { jobId } = req.params;
@@ -13,7 +12,6 @@ exports.createNote = async (req, res) => {
         createdBy: req.user._id
       });
   
-      // ✅ Populate the createdBy field
       const populatedNote = await newNote.populate('createdBy', 'username email');
   
       res.status(201).json({
@@ -26,13 +24,12 @@ exports.createNote = async (req, res) => {
   };
   
 
-// Get all notes for a job
 exports.getNotesByJob = async (req, res) => {
   try {
     const { jobId } = req.params;
 
     const notes = await Note.find({ jobId })
-      .populate('createdBy', 'username email') // show user info
+      .populate('createdBy', 'username email') 
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -44,7 +41,6 @@ exports.getNotesByJob = async (req, res) => {
   }
 };
 
-// Update a note
 exports.updateNote = async (req, res) => {
     try {
       const { noteId } = req.params;
@@ -56,12 +52,10 @@ exports.updateNote = async (req, res) => {
         return res.status(404).json({ message: 'Note not found' });
       }
   
-      // Allow only the creator to update
       if (!note.createdBy.equals(req.user._id)) {
         return res.status(403).json({ message: 'Access denied' });
       }
   
-      // Update the content
       note.content = content;
       await note.save();
   
@@ -78,7 +72,6 @@ exports.updateNote = async (req, res) => {
   };
   
 
-// Delete a note
 exports.deleteNote = async (req, res) => {
   try {
     const { noteId } = req.params;
@@ -86,7 +79,6 @@ exports.deleteNote = async (req, res) => {
     const note = await Note.findById(noteId);
     if (!note) return res.status(404).json({ message: 'Note not found' });
 
-    // Optional: allow only creator to delete
     if (!note.createdBy.equals(req.user._id)) {
       return res.status(403).json({ message: 'Access denied' });
     }

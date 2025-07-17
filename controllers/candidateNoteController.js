@@ -1,7 +1,6 @@
 const CandidateNote = require('../models/CandidateNote');
 const Candidate = require('../models/Candidate');
 
-// Create a new note
 exports.createNote = async (req, res) => {
   const { candidateId, note } = req.body;
 
@@ -27,7 +26,6 @@ exports.createNote = async (req, res) => {
   }
 };
 
-// Get all notes
 exports.getAllNotes = async (req, res) => {
   try {
     const notes = await CandidateNote.find().populate('candidate').sort({ createdAt: -1 });
@@ -37,7 +35,6 @@ exports.getAllNotes = async (req, res) => {
   }
 };
 
-// Get notes by candidate ID
 exports.getNotesByCandidate = async (req, res) => {
   const { candidateId } = req.params;
 
@@ -49,7 +46,6 @@ exports.getNotesByCandidate = async (req, res) => {
   }
 };
 
-// Update a note
 exports.updateNote = async (req, res) => {
   const { id } = req.params;
   const { note } = req.body;
@@ -69,7 +65,6 @@ exports.updateNote = async (req, res) => {
   }
 };
 
-// Delete a note
 exports.deleteNote = async (req, res) => {
   try {
     const deleted = await CandidateNote.findByIdAndDelete(req.params.id);

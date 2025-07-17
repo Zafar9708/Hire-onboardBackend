@@ -95,7 +95,6 @@ exports.scheduleInterview = async (req, res) => {
     }
 };
 
-//for get the offline interviews
 
 exports.getScheduledInterviews = async (req, res) => {
     try {

@@ -6,11 +6,11 @@ const MONGO_URI = 'mongodb://localhost:27017/hire';
 
 mongoose.connect(MONGO_URI)
   .then(() => {
-    console.log('✅ Connected to MongoDB');
+    console.log('Connected to MongoDB');
     insertStages();
   })
   .catch((err) => {
-    console.error('❌ DB connection error:', err);
+    console.error('DB connection error:', err);
   });
 
 async function insertStages() {
@@ -23,7 +23,7 @@ async function insertStages() {
         {
           name,
           order: i + 1,
-          rejectionTypes, // optional, or keep default
+          rejectionTypes, 
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
@@ -32,7 +32,7 @@ async function insertStages() {
     console.log('✅ All stages inserted/updated successfully');
     mongoose.disconnect();
   } catch (error) {
-    console.error('❌ Error inserting stages:', error);
+    console.error(' Error inserting stages:', error);
     mongoose.disconnect();
   }
 }

@@ -19,7 +19,6 @@ exports.submitFeedback = async (req, res) => {
             additionalComments
         } = req.body;
 
-        // Validate input
         if (!status || !technicalSkills || !communicationSkills || 
             !problemSolving || !culturalFit || !overallFeedback) {
             return res.status(400).json({
@@ -28,7 +27,6 @@ exports.submitFeedback = async (req, res) => {
             });
         }
 
-        // Validate rating values
         const ratings = [technicalSkills, communicationSkills, problemSolving, culturalFit];
         if (ratings.some(rating => rating < 1 || rating > 5)) {
             return res.status(400).json({
@@ -37,7 +35,6 @@ exports.submitFeedback = async (req, res) => {
             });
         }
 
-        // Get interview details - no need to populate candidate as it's embedded
         const interview = await Interview.findById(interviewId)
             .populate('jobId', '_id')
             .populate('scheduledBy', 'email');
@@ -49,7 +46,6 @@ exports.submitFeedback = async (req, res) => {
             });
         }
 
-        // Validate job association
         if (!interview.jobId || !interview.jobId._id) {
             return res.status(400).json({
                 success: false,
@@ -57,7 +53,6 @@ exports.submitFeedback = async (req, res) => {
             });
         }
 
-        // Verify interviewer exists
         const interviewer = await Interviewer.findById(interviewerId);
         if (!interviewer) {
             return res.status(404).json({
@@ -66,7 +61,6 @@ exports.submitFeedback = async (req, res) => {
             });
         }
 
-        // Check if interviewer was part of this interview
         if (!interview.interviewers || !interview.interviewers.includes(interviewerId)) {
             return res.status(403).json({
                 success: false,
@@ -74,7 +68,6 @@ exports.submitFeedback = async (req, res) => {
             });
         }
 
-        // Check if feedback already exists
         const existingFeedback = await Feedback.findOne({ interviewId, interviewerId });
         if (existingFeedback) {
             return res.status(409).json({
@@ -83,11 +76,10 @@ exports.submitFeedback = async (req, res) => {
             });
         }
 
-        // Create feedback - use interview.candidate.id for candidateId
         const feedback = new Feedback({
             interviewId,
             interviewerId,
-            candidateId: interview.candidate.id, // This is the crucial change
+            candidateId: interview.candidate.id, 
             jobId: interview.jobId._id,
             status,
             technicalSkills: Number(technicalSkills),
@@ -100,7 +92,6 @@ exports.submitFeedback = async (req, res) => {
 
         await feedback.save();
 
-        // Send email to scheduler if email exists
         if (interview.scheduledBy && interview.scheduledBy.email) {
             await sendFeedbackEmail(
                 interview.scheduledBy.email,

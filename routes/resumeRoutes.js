@@ -23,6 +23,7 @@
 const express = require('express');
 const router = express.Router();
 const { upload, handleCloudinaryUpload } = require('../middleware/cloudinaryUploader');
+const {protect}=require('../middleware/authMiddleware')
 
 const {
   uploadResume,
@@ -34,6 +35,7 @@ const {
 } = require('../controllers/resumeController');
 
 router.post('/upload', 
+    protect,
     upload.single('resume'),
     handleCloudinaryUpload,
     uploadResume

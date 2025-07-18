@@ -75,66 +75,65 @@ const cloudinary = require('../config/cloudinary');
 
 exports.uploadResume = async (req, res) => {
   try {
-    console.log('Upload request received'); // Debug log
-    console.log('User:', req.user); // Debug log
-    console.log('File:', req.file); // Debug log
-
-    if (!req.file?.cloudinary) {
-      console.log('No file processed'); // Debug log
-      return res.status(400).json({ 
+    if (!req.user) {
+      return res.status(401).json({
         success: false,
-        error: 'File processing failed' 
+        error: 'Unauthorized: User not found in request',
       });
     }
 
-    // Create resume data
-    const resumeData = {
-      url: req.file.cloudinary.url,
+    if (!req.file?.cloudinary) {
+      return res.status(400).json({
+        success: false,
+        error: 'File processing failed',
+      });
+    }
+
+    const candidateId = req.body.candidateId || req.user._id;
+
+    const resumeDoc = new ResumeModel.model({
+      candidateId: candidateId,
+      fileUrl: req.file.cloudinary.url,
       cloudinaryId: req.file.cloudinary.public_id,
       fileType: req.file.mimetype,
       originalName: req.file.originalname,
-      userId: req.user._id
-    };
+    });
 
-    // If candidateId is provided in the request
-    if (req.body.candidateId) {
-      resumeData.candidateId = req.body.candidateId;
-      
-      // Update candidate's resume reference
-      await Candidate.findByIdAndUpdate(
-        req.body.candidateId,
-        { resume: resumeData.cloudinaryId },
-        { new: true }
-      ).catch(err => console.error('Candidate update error:', err));
-    }
+    const savedResume = await resumeDoc.save();
 
-    const resume = await Resume.create(resumeData);
-    console.log('Resume created:', resume); // Debug log
+    await Candidate.findByIdAndUpdate(
+      candidateId,
+      {
+        resume: {
+          path: savedResume.fileUrl,
+          originalName: savedResume.originalName,
+        },
+      },
+      { new: true }
+    );
 
     res.status(201).json({
       success: true,
       message: 'Resume uploaded successfully',
       resume: {
-        id: resume._id,
-        url: resume.url,
-        candidateId: resume.candidateId,
-        userId: resume.userId
-      }
+        id: savedResume._id,
+        url: savedResume.fileUrl,
+        candidateId: savedResume.candidateId,
+      },
     });
-
   } catch (err) {
     console.error('Upload error:', err);
-    
-    // Cleanup uploaded file if error occurred
+
     if (req.file?.cloudinary?.public_id) {
-      await cloudinary.uploader.destroy(req.file.cloudinary.public_id)
-        .catch(cleanupErr => console.error('Cleanup error:', cleanupErr));
+      await cloudinary.uploader.destroy(req.file.cloudinary.public_id).catch((cleanupErr) =>
+        console.error('Cleanup error:', cleanupErr)
+      );
     }
-    
+
     res.status(500).json({
       success: false,
       error: 'Failed to upload resume',
-      message: err.message
+      message: err.message,
     });
   }
 };

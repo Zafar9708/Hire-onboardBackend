@@ -1,7 +1,7 @@
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
-// Configure memory storage (we'll handle Cloudinary upload separately)
+// Configure memory storage
 const storage = multer.memoryStorage();
 
 // File filter configuration

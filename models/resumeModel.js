@@ -169,7 +169,7 @@ const ResumeSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  fileUrl: {
+  url: {
     type: String,
     required: true
   },
@@ -181,9 +181,18 @@ const ResumeSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  originalName: {
+    type: String,
+    required: true
+  },
   candidateId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Candidate'
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   parsedAt: {
     type: Date,

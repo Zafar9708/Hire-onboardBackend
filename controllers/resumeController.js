@@ -82,23 +82,35 @@ exports.uploadResume = async (req, res) => {
       });
     }
 
-    const candidateId = req.body.candidateId || req.user._id;
-    
+    // Ensure user is authenticated
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
     const resumeData = {
-      candidateId,
       url: req.file.cloudinary.url,
       cloudinaryId: req.file.cloudinary.public_id,
       fileType: req.file.mimetype,
-      originalName: req.file.originalname
+      originalName: req.file.originalname,
+      userId: req.user._id
     };
 
+    // If candidateId is provided in the request
+    if (req.body.candidateId) {
+      resumeData.candidateId = req.body.candidateId;
+      
+      // Update candidate's resume reference
+      await Candidate.findByIdAndUpdate(
+        req.body.candidateId,
+        { resume: resumeData.cloudinaryId },
+        { new: true }
+      );
+    }
+
     const resume = await Resume.create(resumeData);
-    
-    await Candidate.findByIdAndUpdate(
-      candidateId,
-      { resume: resume._id },
-      { new: true }
-    );
 
     res.status(201).json({
       success: true,
@@ -106,13 +118,15 @@ exports.uploadResume = async (req, res) => {
       resume: {
         id: resume._id,
         url: resume.url,
-        candidateId: resume.candidateId
+        candidateId: resume.candidateId,
+        userId: resume.userId
       }
     });
 
   } catch (err) {
     console.error('Upload error:', err);
     
+    // Cleanup uploaded file if error occurred
     if (req.file?.cloudinary?.public_id) {
       await cloudinary.uploader.destroy(req.file.cloudinary.public_id)
         .catch(cleanupErr => console.error('Cleanup error:', cleanupErr));

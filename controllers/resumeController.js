@@ -72,44 +72,83 @@
 const Resume = require('../models/resumeModel');
 const Candidate = require('../models/Candidate');
 const cloudinary = require('../config/cloudinary');
+const { extractText, extractSkills, extractExperience } = require('../utils/parserHelpers');
+
 
 exports.uploadResume = async (req, res) => {
   try {
-    const file = req.file;
-    if (!file) return res.status(400).json({ success: false, error: "No resume file uploaded" });
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "No resume file uploaded" 
+      });
+    }
 
-    const result = await cloudinary.uploader.upload(file.path, { resource_type: "raw" });
-
-    const extractedText = await extractText(file.path);
-    const skills = extractSkills(extractedText);
-    const experience = extractExperience(extractedText);
-
-    const newResume = new Resume({
-      resumeUrl: result.secure_url,
-      originalFileName: file.originalname,
-      extractedSkills: skills,
-      experience: experience,
+    // Upload to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { resource_type: "raw", folder: "resumes" },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end(req.file.buffer);
     });
 
-    let savedResume;
-    try {
-      savedResume = await newResume.save();
-    } catch (err) {
-      console.error("Error saving resume:", err);
-      return res.status(500).json({ success: false, error: "Failed to save resume", message: err.message });
+    // Extract text from the file
+    let extractedText;
+    if (req.file.mimetype === 'application/pdf') {
+      const data = await pdfParse(req.file.buffer);
+      extractedText = data.text;
+    } else {
+      extractedText = await new Promise((resolve, reject) => {
+        textract.fromBufferWithName(req.file.originalname, req.file.buffer, (err, text) => {
+          if (err) reject(err);
+          else resolve(text);
+        });
+      });
     }
+
+    // Parse the resume data
+    const { firstName, middleName, lastName } = ResumeModel.extractName(extractedText);
+    const parsedData = {
+      firstName,
+      middleName,
+      lastName,
+      email: ResumeModel.extractEmail(extractedText),
+      phone: ResumeModel.extractPhone(extractedText),
+      skills: extractSkills(extractedText).split(', '),
+      experience: extractExperience(extractedText),
+      education: ResumeModel.extractEducation(extractedText),
+      url: result.secure_url,
+      cloudinaryId: result.public_id,
+      fileType: req.file.mimetype,
+      originalName: req.file.originalname,
+      userId: req.user._id // Assuming you have user authentication
+    };
+
+    if (!parsedData.email) {
+      // Clean up the uploaded file if parsing fails
+      await cloudinary.uploader.destroy(result.public_id);
+      throw new Error('No email found in resume');
+    }
+
+    const newResume = new Resume(parsedData);
+    const savedResume = await newResume.save();
 
     res.status(200).json({
       success: true,
       message: "Resume uploaded and parsed successfully",
-      resumeId: savedResume?._id,
-      resumeUrl: savedResume?.resumeUrl,
-      skills,
-      experience,
+      ...savedResume._doc
     });
   } catch (error) {
     console.error("Error parsing resume:", error);
-    res.status(500).json({ success: false, error: "Failed to upload resume", message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      error: "Failed to upload resume", 
+      message: error.message 
+    });
   }
 };
 

@@ -75,21 +75,19 @@ const cloudinary = require('../config/cloudinary');
 
 exports.uploadResume = async (req, res) => {
   try {
+    console.log('Upload request received'); // Debug log
+    console.log('User:', req.user); // Debug log
+    console.log('File:', req.file); // Debug log
+
     if (!req.file?.cloudinary) {
+      console.log('No file processed'); // Debug log
       return res.status(400).json({ 
         success: false,
         error: 'File processing failed' 
       });
     }
 
-    // Ensure user is authenticated
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
-    }
-
+    // Create resume data
     const resumeData = {
       url: req.file.cloudinary.url,
       cloudinaryId: req.file.cloudinary.public_id,
@@ -107,10 +105,11 @@ exports.uploadResume = async (req, res) => {
         req.body.candidateId,
         { resume: resumeData.cloudinaryId },
         { new: true }
-      );
+      ).catch(err => console.error('Candidate update error:', err));
     }
 
     const resume = await Resume.create(resumeData);
+    console.log('Resume created:', resume); // Debug log
 
     res.status(201).json({
       success: true,

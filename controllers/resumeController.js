@@ -75,68 +75,44 @@ const cloudinary = require('../config/cloudinary');
 
 exports.uploadResume = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized: User not found in request',
-      });
-    }
+    const file = req.file;
+    if (!file) return res.status(400).json({ success: false, error: "No resume file uploaded" });
 
-    if (!req.file?.cloudinary) {
-      return res.status(400).json({
-        success: false,
-        error: 'File processing failed',
-      });
-    }
+    const result = await cloudinary.uploader.upload(file.path, { resource_type: "raw" });
 
-    const candidateId = req.body.candidateId || req.user._id;
+    const extractedText = await extractText(file.path);
+    const skills = extractSkills(extractedText);
+    const experience = extractExperience(extractedText);
 
-    const resumeDoc = new ResumeModel.model({
-      candidateId: candidateId,
-      fileUrl: req.file.cloudinary.url,
-      cloudinaryId: req.file.cloudinary.public_id,
-      fileType: req.file.mimetype,
-      originalName: req.file.originalname,
+    const newResume = new Resume({
+      resumeUrl: result.secure_url,
+      originalFileName: file.originalname,
+      extractedSkills: skills,
+      experience: experience,
     });
 
-    const savedResume = await resumeDoc.save();
+    let savedResume;
+    try {
+      savedResume = await newResume.save();
+    } catch (err) {
+      console.error("Error saving resume:", err);
+      return res.status(500).json({ success: false, error: "Failed to save resume", message: err.message });
+    }
 
-    await Candidate.findByIdAndUpdate(
-      candidateId,
-      {
-        resume: {
-          path: savedResume.fileUrl,
-          originalName: savedResume.originalName,
-        },
-      },
-      { new: true }
-    );
-
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: 'Resume uploaded successfully',
-      resume: {
-        id: savedResume._id,
-        url: savedResume.fileUrl,
-        candidateId: savedResume.candidateId,
-      },
+      message: "Resume uploaded and parsed successfully",
+      resumeId: savedResume?._id,
+      resumeUrl: savedResume?.resumeUrl,
+      skills,
+      experience,
     });
-  } catch (err) {
-    console.error('Upload error:', err);
-
-    if (req.file?.cloudinary?.public_id) {
-      await cloudinary.uploader.destroy(req.file.cloudinary.public_id).catch((cleanupErr) =>
-        console.error('Cleanup error:', cleanupErr)
-      );
-    }
-
-    res.status(500).json({
-      success: false,
-      error: 'Failed to upload resume',
-      message: err.message,
-    });
+  } catch (error) {
+    console.error("Error parsing resume:", error);
+    res.status(500).json({ success: false, error: "Failed to upload resume", message: error.message });
   }
 };
+
 
 exports.getAllResumes = async (req, res) => {
   try {

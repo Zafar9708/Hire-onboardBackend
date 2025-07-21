@@ -179,7 +179,6 @@ const getCandidateStageHistory = async (req, res) => {
             changedAt: comment.changedAt,
           });
 
-          // Track when the candidate entered their current stage
           if (
             comment.stageChangedTo === candidate.stage?.name &&
             (!currentStageDate || new Date(comment.changedAt) > new Date(currentStageDate))

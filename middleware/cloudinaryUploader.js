@@ -1,100 +1,46 @@
-// const multer = require('multer');
-// const cloudinary = require('cloudinary').v2;
-
-// // Configure memory storage
-// const storage = multer.memoryStorage();
-
-// // File filter configuration
-// const fileFilter = (req, file, cb) => {
-//   const allowedTypes = [
-//     'application/pdf',
-//     'application/msword',
-//     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-//   ];
-  
-//   if (allowedTypes.includes(file.mimetype)) {
-//     cb(null, true);
-//   } else {
-//     cb(new Error('Only PDF and Word documents are allowed'), false);
-//   }
-// };
-
-// // Create multer instance
-// const upload = multer({
-//   storage: storage,
-//   fileFilter: fileFilter,
-//   limits: {
-//     fileSize: 5 * 1024 * 1024 // 5MB
-//   }
-// });
-
-// // Middleware to handle Cloudinary upload
-// const handleCloudinaryUpload = async (req, res, next) => {
-//   if (!req.file) return next();
-  
-//   try {
-//     const result = await new Promise((resolve, reject) => {
-//       const uploadStream = cloudinary.uploader.upload_stream(
-//         {
-//           folder: 'resumes',
-//           resource_type: 'auto',
-//           format: 'pdf' // Convert all files to PDF for consistency
-//         },
-//         (error, result) => {
-//           if (error) reject(error);
-//           else resolve(result);
-//         }
-//       );
-      
-//       uploadStream.end(req.file.buffer);
-//     });
-
-//     req.file.cloudinary = {
-//       url: result.secure_url,
-//       public_id: result.public_id
-//     };
-//     next();
-//   } catch (err) {
-//     next(err);
-//   }
-// };
-
-// module.exports = {
-//   upload,
-//   handleCloudinaryUpload
-// };
-
-
-//------
-
 const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
+const path = require('path');
 
-// Configure memory storage
 const storage = multer.memoryStorage();
 
-// File filter configuration
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  ];
-  
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only PDF and Word documents are allowed'), false);
+  const filetypes = /pdf|doc|docx/;
+  const mimetype = filetypes.test(file.mimetype);
+  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+  if (mimetype && extname) {
+    return cb(null, true);
   }
+  cb(new Error(`Invalid file type. Only ${filetypes} are allowed`));
 };
 
-// Create multer instance
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
+    fileSize: 10 * 1024 * 1024
   }
-});
+}).single('resume'); 
 
-module.exports = upload;
+const uploadFile = (req, res) => {
+  return new Promise((resolve, reject) => {
+    upload(req, res, (err) => {
+      if (err) {
+        console.error('Multer error:', err);
+        reject(err);
+      } else if (!req.file) {
+        console.error('No file received');
+        reject(new Error('No file uploaded'));
+      } else {
+        console.log('File received:', {
+          originalname: req.file.originalname,
+          size: req.file.size,
+          buffer: req.file.buffer ? `Buffer(${req.file.buffer.length} bytes)` : 'NULL'
+        });
+        resolve();
+      }
+    });
+  });
+};
+
+module.exports = uploadFile;

@@ -320,6 +320,20 @@ class ResumeModel {
     return phoneMatch ? phoneMatch[0] : '';
   }
 
+  static extractSkills(text) {
+    // Basic skill extraction - customize as needed
+    const commonSkills = [
+      'JavaScript', 'React', 'Node.js', 'Python', 'Java', 
+      'HTML', 'CSS', 'SQL', 'MongoDB', 'Express'
+    ];
+    
+    const foundSkills = commonSkills.filter(skill => 
+      text.toLowerCase().includes(skill.toLowerCase())
+    );
+    
+    return foundSkills.join(', ');
+  }
+
   static extractExperience(text) {
     const match = text.match(/(\d{1,2})\s*\+?\s*(years|yrs)/i);
     return match ? `${match[1]} years` : '';

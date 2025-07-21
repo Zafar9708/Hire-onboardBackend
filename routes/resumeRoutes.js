@@ -55,10 +55,21 @@
 const express = require('express');
 const router = express.Router();
 const resumeController = require('../controllers/resumeController');
-const upload = require('../middleware/upload');
+const uploadFile=require('../middleware/cloudinaryUploader')
 const { protect } = require('../middleware/authMiddleware');
 
-router.post('/upload', protect, upload.single('resume'), resumeController.uploadResume);
+router.post('/upload',protect, async (req, res) => {
+  try {
+    await uploadFile(req, res);
+    return resumeController.uploadResume(req, res);
+  } catch (err) {
+    console.error('Upload route error:', err);
+    return res.status(400).json({
+      success: false,
+      error: err.message || 'File upload failed'
+    });
+  }
+});
 router.get('/',  resumeController.getAllResumes);
 router.get('/:id',  resumeController.getResumeById);
 router.get('/candidates/:id/resume',  resumeController.getCandidateResume);

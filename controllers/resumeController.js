@@ -76,14 +76,12 @@ const cloudinary = require('../config/cloudinary');
 const pdfParse = require('pdf-parse'); // Added this line
 const textract = require('textract'); // Added this line
 
+
 exports.uploadResume = async (req, res) => {
   console.log('=== STARTING RESUME UPLOAD ===');
   
   try {
-    // 1. Check if file exists
-    console.log('[1/7] Checking file existence...');
     if (!req.file) {
-      console.error('No file in request');
       return res.status(400).json({ 
         success: false, 
         error: "No resume file uploaded" 
@@ -97,41 +95,30 @@ exports.uploadResume = async (req, res) => {
       bufferLength: req.file.buffer?.length
     });
 
-    // 2. Validate file buffer
-    console.log('[2/7] Validating file buffer...');
     if (!req.file.buffer || req.file.buffer.length === 0) {
-      console.error('Empty file buffer detected');
       return res.status(400).json({ 
         success: false, 
         error: "Empty file buffer" 
       });
     }
 
-    // 3. Extract text
-    console.log('[3/7] Extracting text from file...');
     let extractedText;
     try {
       if (req.file.mimetype === 'application/pdf') {
-        console.log('Processing PDF file...');
         const data = await pdfParse(req.file.buffer);
         extractedText = data.text;
-        console.log('PDF text extracted (first 100 chars):', extractedText.substring(0, 100));
       } else {
-        console.log('Processing DOC/DOCX file...');
         extractedText = await new Promise((resolve, reject) => {
           textract.fromBufferWithName(req.file.originalname, req.file.buffer, (err, text) => {
             if (err) {
-              console.error('Textract error:', err);
               reject(err);
             } else {
-              console.log('DOC text extracted (first 100 chars):', text.substring(0, 100));
               resolve(text);
             }
           });
         });
       }
     } catch (extractErr) {
-      console.error('Text extraction failed:', extractErr);
       return res.status(400).json({
         success: false,
         error: "Failed to extract text",
@@ -139,10 +126,7 @@ exports.uploadResume = async (req, res) => {
       });
     }
 
-    // 4. Validate extracted text
-    console.log('[4/7] Validating extracted text...');
     if (!extractedText || extractedText.trim().length === 0) {
-      console.error('Empty text extracted from file');
       return res.status(400).json({
         success: false,
         error: "Empty content",
@@ -150,8 +134,6 @@ exports.uploadResume = async (req, res) => {
       });
     }
 
-    // 5. Upload to Cloudinary
-    console.log('[5/7] Uploading to Cloudinary...');
     let cloudinaryResult;
     try {
       cloudinaryResult = await new Promise((resolve, reject) => {
@@ -185,8 +167,7 @@ exports.uploadResume = async (req, res) => {
       });
     }
 
-    // 6. Parse resume data
-    console.log('[6/7] Parsing resume data...');
+  
     const { firstName, middleName, lastName } = ResumeModel.extractName(extractedText);
     const parsedData = {
       firstName,
@@ -194,8 +175,8 @@ exports.uploadResume = async (req, res) => {
       lastName,
       email: ResumeModel.extractEmail(extractedText),
       phone: ResumeModel.extractPhone(extractedText),
-      skills: extractSkills(extractedText).split(', '),
-      experience: extractExperience(extractedText),
+      skills: ResumeModel.extractSkills(extractedText).split(', '),
+      experience: ResumeModel.extractExperience(extractedText),
       education: ResumeModel.extractEducation(extractedText),
       url: cloudinaryResult.secure_url,
       cloudinaryId: cloudinaryResult.public_id,
@@ -204,7 +185,6 @@ exports.uploadResume = async (req, res) => {
       userId: req.user._id
     };
 
-    console.log('Parsed data:', JSON.stringify(parsedData, null, 2));
 
     if (!parsedData.email) {
       console.error('No email found in resume');
@@ -216,8 +196,7 @@ exports.uploadResume = async (req, res) => {
       });
     }
 
-    // 7. Save to database
-    console.log('[7/7] Saving to database...');
+   
     const newResume = new Resume(parsedData);
     const savedResume = await newResume.save();
     console.log('Resume saved successfully:', savedResume._id);

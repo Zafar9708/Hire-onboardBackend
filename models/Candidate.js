@@ -23,9 +23,9 @@ const candidateSchema = new mongoose.Schema({
   experience: String,
   education: String,
   resume: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Resume'
-  },
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Resume'
+},
   additionalDocuments: [{
     path: String,
     originalName: String

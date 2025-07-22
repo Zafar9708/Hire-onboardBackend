@@ -11,28 +11,112 @@ const textract = require('textract');
 const cloudinary = require('../config/cloudinary');
 
 
+// const createCandidate = async (req, res) => {
+//   try {
+//     const data = req.body;
+//     const uploadedFile = req.file;
+
+//     if (uploadedFile) {
+//       const resume = await ResumeModel.parseAndSave({
+//         buffer: uploadedFile.buffer,
+//         originalname: uploadedFile.originalname,
+//         mimetype: uploadedFile.mimetype
+//       });
+
+//       data.resume = resume._id;
+//     }
+
+//     data.userId = req.user._id;
+//     const candidate = new Candidate(data);
+//     const response = await candidate.save();
+
+//     // Link the candidate to the resume
+//     if (uploadedFile && response.resume) {
+//       await Resume.findByIdAndUpdate(response.resume, { candidateId: response._id });
+//     }
+
+//     res.status(201).json({ 
+//       success: true,
+//       message: "Candidate saved successfully",
+//       candidate: response 
+//     });
+//   } catch (error) {
+//     console.error('Error creating candidate:', error);
+//     res.status(500).json({ 
+//       success: false,
+//       error: error.message || 'Error creating candidate' 
+//     });
+//   }
+// };
+
 const createCandidate = async (req, res) => {
   try {
     const data = req.body;
     const uploadedFile = req.file;
 
-    if (uploadedFile) {
-      const resume = await ResumeModel.parseAndSave({
-        buffer: uploadedFile.buffer,
-        originalname: uploadedFile.originalname,
-        mimetype: uploadedFile.mimetype
-      });
-
-      data.resume = resume._id;
-    }
-
+    // Create candidate first
     data.userId = req.user._id;
     const candidate = new Candidate(data);
     const response = await candidate.save();
 
-    // Link the candidate to the resume
-    if (uploadedFile && response.resume) {
-      await Resume.findByIdAndUpdate(response.resume, { candidateId: response._id });
+    // If there's a resume file, process it and link to candidate
+    if (uploadedFile) {
+      // Upload to Cloudinary
+      const cloudinaryResult = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { 
+            resource_type: "auto",
+            folder: "resumes",
+            public_id: `resume_${Date.now()}_${uploadedFile.originalname.replace(/\.[^/.]+$/, "")}`
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(uploadedFile.buffer);
+      });
+
+      // Extract text from resume
+      let extractedText;
+      if (uploadedFile.mimetype === 'application/pdf') {
+        const data = await pdfParse(uploadedFile.buffer);
+        extractedText = data.text;
+      } else {
+        extractedText = await new Promise((resolve, reject) => {
+          textract.fromBufferWithName(uploadedFile.originalname, uploadedFile.buffer, (err, text) => {
+            if (err) reject(err);
+            else resolve(text);
+          });
+        });
+      }
+
+      // Parse resume data
+      const { firstName, middleName, lastName } = ResumeModel.extractName(extractedText);
+      const parsedData = {
+        firstName,
+        middleName,
+        lastName,
+        email: ResumeModel.extractEmail(extractedText),
+        phone: ResumeModel.extractPhone(extractedText),
+        skills: ResumeModel.extractSkills(extractedText).split(', '),
+        experience: ResumeModel.extractExperience(extractedText),
+        education: ResumeModel.extractEducation(extractedText),
+        url: cloudinaryResult.secure_url,
+        cloudinaryId: cloudinaryResult.public_id,
+        fileType: uploadedFile.mimetype,
+        originalName: uploadedFile.originalname,
+        userId: req.user._id,
+        candidateId: response._id // Link to the candidate
+      };
+
+      // Save resume
+      const resume = new Resume(parsedData);
+      const savedResume = await resume.save();
+
+      // Update candidate with resume reference
+      response.resume = savedResume._id;
+      await response.save();
     }
 
     res.status(201).json({ 
@@ -48,7 +132,6 @@ const createCandidate = async (req, res) => {
     });
   }
 };
-
 
 const getAllCandidates = async (req, res) => {
   try {

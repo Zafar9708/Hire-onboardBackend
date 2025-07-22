@@ -54,67 +54,78 @@ const createCandidate = async (req, res) => {
     const data = req.body;
     const uploadedFile = req.file;
 
-    // Initialize resumeId variable
-    let resumeId = null;
-
     // Process resume first if exists
+    let savedResume = null;
     if (uploadedFile) {
-      // Extract text from resume
-      const text = await ResumeModel.extractText({
-        buffer: uploadedFile.buffer,
-        originalname: uploadedFile.originalname,
-        mimetype: uploadedFile.mimetype
-      });
+      try {
+        // Extract text from resume
+        const text = await ResumeModel.extractText({
+          buffer: uploadedFile.buffer,
+          originalname: uploadedFile.originalname,
+          mimetype: uploadedFile.mimetype
+        });
 
-      // Upload to Cloudinary
-      const cloudinaryResult = await ResumeModel.uploadToCloudinary(uploadedFile);
+        // Upload to Cloudinary
+        const cloudinaryResult = await ResumeModel.uploadToCloudinary(uploadedFile);
 
-      // Parse resume data
-      const { firstName, middleName, lastName } = ResumeModel.extractName(text);
-      const parsedData = {
-        firstName,
-        middleName,
-        lastName,
-        email: ResumeModel.extractEmail(text),
-        phone: ResumeModel.extractPhone(text),
-        skills: extractSkills(text).split(', '),
-        experience: extractExperience(text),
-        education: ResumeModel.extractEducation(text),
-        url: cloudinaryResult.url,
-        cloudinaryId: cloudinaryResult.publicId,
-        fileType: uploadedFile.mimetype,
-        originalName: uploadedFile.originalname,
-        userId: req.user._id
-      };
+        // Parse resume data
+        const { firstName, middleName, lastName } = ResumeModel.extractName(text);
+        const parsedData = {
+          firstName: firstName || data.firstName,
+          middleName: middleName || data.middleName,
+          lastName: lastName || data.lastName,
+          email: ResumeModel.extractEmail(text) || data.email,
+          phone: ResumeModel.extractPhone(text) || data.mobile,
+          skills: extractSkills(text).split(', ') || data.skills,
+          experience: extractExperience(text) || data.experience,
+          education: ResumeModel.extractEducation(text) || data.education,
+          url: cloudinaryResult.url,
+          cloudinaryId: cloudinaryResult.publicId,
+          fileType: uploadedFile.mimetype,
+          originalName: uploadedFile.originalname,
+          userId: req.user._id
+        };
 
-      // Create and save resume
-      const resume = new Resume(parsedData);
-      const savedResume = await resume.save();
-      resumeId = savedResume._id;
+        // Create and save resume
+        savedResume = new Resume(parsedData);
+        await savedResume.save();
+      } catch (resumeError) {
+        console.error('Error processing resume:', resumeError);
+        // Continue with candidate creation even if resume fails
+      }
     }
 
-    // Create candidate with resume reference
+    // Prepare candidate data
     const candidateData = {
       ...data,
       userId: req.user._id,
-      resume: resumeId  // Add resume reference if exists
+      resume: savedResume ? savedResume._id : undefined
     };
 
-    // Convert skills string to array if needed
+    // Convert skills to array if it's a string
     if (typeof candidateData.skills === 'string') {
       candidateData.skills = candidateData.skills.split(',').map(skill => skill.trim());
     }
 
+    // Create and save candidate
     const candidate = new Candidate(candidateData);
     const response = await candidate.save();
 
     // Update resume with candidate reference if exists
-    if (resumeId) {
-      await Resume.findByIdAndUpdate(resumeId, { candidateId: response._id });
+    if (savedResume) {
+      await Resume.findByIdAndUpdate(
+        savedResume._id,
+        { candidateId: response._id },
+        { new: true }
+      );
     }
 
-    // Populate resume in response
-    const populatedCandidate = await Candidate.findById(response._id).populate('resume');
+    // Get the full candidate with populated resume
+    const populatedCandidate = await Candidate.findById(response._id)
+      .populate('resume')
+      .populate('stage')
+      .populate('jobId')
+      .populate('userId');
 
     res.status(201).json({ 
       success: true,

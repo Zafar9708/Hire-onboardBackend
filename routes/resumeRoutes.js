@@ -63,7 +63,6 @@ router.post('/upload',protect, async (req, res) => {
     await uploadFile(req, res);
     return resumeController.uploadResume(req, res);
   } catch (err) {
-    console.error('Upload route error:', err);
     return res.status(400).json({
       success: false,
       error: err.message || 'File upload failed'

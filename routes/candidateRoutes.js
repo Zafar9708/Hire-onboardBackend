@@ -49,7 +49,6 @@ router.put(
   editCandidateById
 );
 
-// Add the new endpoint for moving stages
 router.put('/:id/stage',  moveCandidateStage);
 
 router.delete('/:id', protect, deletCandidateById);

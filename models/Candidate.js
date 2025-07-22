@@ -1,7 +1,4 @@
 
-
-
-
 const mongoose = require('mongoose');
 
 const candidateSchema = new mongoose.Schema({
@@ -26,8 +23,8 @@ const candidateSchema = new mongoose.Schema({
   experience: String,
   education: String,
   resume: {
-    path: String,
-    originalName: String
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Resume'
   },
   additionalDocuments: [{
     path: String,
@@ -41,9 +38,8 @@ const candidateSchema = new mongoose.Schema({
     changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
   }],
   rejectionType: String,
-  // rejectionReason: String,
   createdAt: { type: Date, default: Date.now },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } ,
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' }
 });
 

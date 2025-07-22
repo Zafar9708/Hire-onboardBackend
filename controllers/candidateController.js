@@ -4,20 +4,23 @@ const { transporter } = require('../config/email');
 const Candidate = require('../models/Candidate');
 const { parseResume } = require('../utils/resumeParser');
 const mongoose=require('mongoose')
+const Resume = require('../models/resumeModel').model;
+const ResumeModel = require('../models/resumeModel');
+const pdfParse = require('pdf-parse');
+const textract = require('textract');
+const cloudinary = require('../config/cloudinary');
 
 
 const createCandidate = async (req, res) => {
   try {
     const data = req.body;
-    const uploadedFile = req.file; // Now using single file upload
+    const uploadedFile = req.file;
 
     if (uploadedFile) {
-      // Upload resume first
-      const resume = await Resume.parseAndSave({
-        path: uploadedFile.path,
-        filename: uploadedFile.filename,
-        mimetype: uploadedFile.mimetype,
-        originalname: uploadedFile.originalname
+      const resume = await ResumeModel.parseAndSave({
+        buffer: uploadedFile.buffer,
+        originalname: uploadedFile.originalname,
+        mimetype: uploadedFile.mimetype
       });
 
       data.resume = resume._id;
@@ -26,6 +29,11 @@ const createCandidate = async (req, res) => {
     data.userId = req.user._id;
     const candidate = new Candidate(data);
     const response = await candidate.save();
+
+    // Link the candidate to the resume
+    if (uploadedFile && response.resume) {
+      await Resume.findByIdAndUpdate(response.resume, { candidateId: response._id });
+    }
 
     res.status(201).json({ 
       success: true,

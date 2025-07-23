@@ -78,8 +78,9 @@ app.use('/api/job-status', jobStatusRoutes);
 app.use('/api/feedback', feedbackRoutes);
 
 
+
 app.use(cors({
-  origin: 'https://hire-onboard.vercel.app', 
+  origin: ['http://localhost:5173','https://hire-onboard.vercel.app'], 
   credentials: true
 }));
 

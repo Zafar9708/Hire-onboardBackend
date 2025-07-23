@@ -74,5 +74,9 @@ router.get('/:id',  resumeController.getResumeById);
 router.get('/candidates/:id/resume',  resumeController.getCandidateResume);
 router.get('/download/:id', resumeController.downloadResumeById);
 router.delete('/:id', resumeController.deleteResume);
+router.get('/preview/:id', resumeController.previewResumeById);
+
+
+
 
 module.exports = router;

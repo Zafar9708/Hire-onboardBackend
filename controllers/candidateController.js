@@ -11,127 +11,87 @@ const textract = require('textract');
 const cloudinary = require('../config/cloudinary');
 
 
-// const createCandidate = async (req, res) => {
-//   try {
-//     const data = req.body;
-//     const uploadedFile = req.file;
-
-//     if (uploadedFile) {
-//       const resume = await ResumeModel.parseAndSave({
-//         buffer: uploadedFile.buffer,
-//         originalname: uploadedFile.originalname,
-//         mimetype: uploadedFile.mimetype
-//       });
-
-//       data.resume = resume._id;
-//     }
-
-//     data.userId = req.user._id;
-//     const candidate = new Candidate(data);
-//     const response = await candidate.save();
-
-//     // Link the candidate to the resume
-//     if (uploadedFile && response.resume) {
-//       await Resume.findByIdAndUpdate(response.resume, { candidateId: response._id });
-//     }
-
-//     res.status(201).json({ 
-//       success: true,
-//       message: "Candidate saved successfully",
-//       candidate: response 
-//     });
-//   } catch (error) {
-//     console.error('Error creating candidate:', error);
-//     res.status(500).json({ 
-//       success: false,
-//       error: error.message || 'Error creating candidate' 
-//     });
-//   }
-// };
-
 const createCandidate = async (req, res) => {
   try {
     const data = req.body;
     const uploadedFile = req.file;
+    const jobId = data.jobId;
 
-    // Process resume first if exists
-    let savedResume = null;
     if (uploadedFile) {
       try {
-        // Extract text from resume
-        const text = await ResumeModel.extractText({
-          buffer: uploadedFile.buffer,
-          originalname: uploadedFile.originalname,
-          mimetype: uploadedFile.mimetype
+        const cloudinaryResult = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { 
+              resource_type: "auto",
+              folder: "resumes",
+              public_id: `resume_${Date.now()}_${uploadedFile.originalname.replace(/\.[^/.]+$/, "")}`
+            },
+            (error, result) => error ? reject(error) : resolve(result)
+          );
+          uploadStream.end(uploadedFile.buffer);
         });
 
-        // Upload to Cloudinary
-        const cloudinaryResult = await ResumeModel.uploadToCloudinary(uploadedFile);
+        let extractedText;
+        if (uploadedFile.mimetype === 'application/pdf') {
+          const data = await pdfParse(uploadedFile.buffer);
+          extractedText = data.text;
+        } else {
+          extractedText = await new Promise((resolve, reject) => {
+            textract.fromBufferWithName(uploadedFile.originalname, uploadedFile.buffer, 
+              (err, text) => err ? reject(err) : resolve(text));
+          });
+        }
 
-        // Parse resume data
-        const { firstName, middleName, lastName } = ResumeModel.extractName(text);
-        const parsedData = {
+        const { firstName, middleName, lastName } = extractName(extractedText);
+        const resume = await Resume.create({
           firstName: firstName || data.firstName,
           middleName: middleName || data.middleName,
           lastName: lastName || data.lastName,
-          email: ResumeModel.extractEmail(text) || data.email,
-          phone: ResumeModel.extractPhone(text) || data.mobile,
-          skills: extractSkills(text).split(', ') || data.skills,
-          experience: extractExperience(text) || data.experience,
-          education: ResumeModel.extractEducation(text) || data.education,
-          url: cloudinaryResult.url,
-          cloudinaryId: cloudinaryResult.publicId,
+          email: extractEmail(extractedText) || data.email,
+          phone: extractPhone(extractedText) || data.mobile,
+          skills: extractSkills(extractedText).split(', ') || data.skills,
+          experience: extractExperience(extractedText) || data.experience,
+          education: extractEducation(extractedText) || data.education,
+          url: cloudinaryResult.secure_url,
+          cloudinaryId: cloudinaryResult.public_id,
           fileType: uploadedFile.mimetype,
           originalName: uploadedFile.originalname,
+          jobId: jobId,
           userId: req.user._id
-        };
+        });
 
-        // Create and save resume
-        savedResume = new Resume(parsedData);
-        await savedResume.save();
+        data.resume = resume._id;
       } catch (resumeError) {
-        console.error('Error processing resume:', resumeError);
-        // Continue with candidate creation even if resume fails
+        console.error('Resume processing error:', resumeError);
       }
     }
 
-    // Prepare candidate data
-    const candidateData = {
+    // Create candidate
+    const candidate = new Candidate({
       ...data,
-      userId: req.user._id,
-      resume: savedResume ? savedResume._id : undefined
-    };
-
-    // Convert skills to array if it's a string
-    if (typeof candidateData.skills === 'string') {
-      candidateData.skills = candidateData.skills.split(',').map(skill => skill.trim());
-    }
-
-    // Create and save candidate
-    const candidate = new Candidate(candidateData);
-    const response = await candidate.save();
-
-    // Update resume with candidate reference if exists
-    if (savedResume) {
-      await Resume.findByIdAndUpdate(
-        savedResume._id,
-        { candidateId: response._id },
-        { new: true }
-      );
-    }
-
-    // Get the full candidate with populated resume
-    const populatedCandidate = await Candidate.findById(response._id)
-      .populate('resume')
-      .populate('stage')
-      .populate('jobId')
-      .populate('userId');
-
-    res.status(201).json({ 
-      success: true,
-      message: "Candidate saved successfully",
-      candidate: populatedCandidate
+      userId: req.user._id
     });
+    const savedCandidate = await candidate.save();
+
+    // Update resume with candidateId if exists
+    if (savedCandidate.resume) {
+      await Resume.findByIdAndUpdate(savedCandidate.resume, {
+        candidateId: savedCandidate._id
+      });
+    }
+
+    // Return fully populated candidate
+    const result = await Candidate.findById(savedCandidate._id)
+      .populate('resume')
+      .populate('jobId')
+      .populate('stage');
+
+    res.status(201).json({
+      success: true,
+      message: "Candidate created successfully",
+      candidate: result
+    });
+
   } catch (error) {
     console.error('Error creating candidate:', error);
     res.status(500).json({ 
@@ -140,6 +100,7 @@ const createCandidate = async (req, res) => {
     });
   }
 };
+
 
 const getAllCandidates = async (req, res) => {
   try {

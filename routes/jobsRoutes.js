@@ -10,8 +10,8 @@ const { getJobTemplates, postJob, getAllJobs, getJobDetailById, changeJobStatusB
 
 
 // Add these to your job routes
-router.get('/job-forms/locations', getLocation);
-router.post('/job-forms/locations', addLocation);
+// router.get('/job-forms/locations', getLocation);
+// router.post('/job-forms/locations', addLocation);
 router.post('/', protect, postJob);
 router.put('/:id',protect, updateJob);
 router.delete('/',protect,deleteJob);

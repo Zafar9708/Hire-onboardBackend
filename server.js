@@ -30,6 +30,7 @@ const noteRoutes = require('./routes/noteRoutes');
 const candidateNoteRoutes = require('./routes/candidateNoteRoutes');
 const candidateCommentsRoutes = require('./routes/candidateComments');
 const clientRoutes = require('./routes/clientRoutes');
+const locationRoutes=require('./routes/locationRoutes')
 
 
 
@@ -65,6 +66,7 @@ app.use('/api/job-status', jobStatusRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/employees',employeeRoutes)
 app.use('/api/clients', clientRoutes);
+app.use('/api/locations',locationRoutes)
 
 
 

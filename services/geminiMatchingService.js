@@ -1,9 +1,18 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+
+// Debug: Log API key status
+console.log("Gemini API Key:", process.env.GEMINI_API_KEY ? "Loaded" : "MISSING");
+
 // Initialize with explicit API version
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+
 async function analyzeResumeWithGemini(resumeText, jobDescription) {
+    if (!process.env.GEMINI_API_KEY) {
+    console.error("Gemini API key missing in env");
+    return getBasicAnalysis(resumeText, jobDescription);
+  }
   try {
     // Try the most current model names
     const model = genAI.getGenerativeModel({ 

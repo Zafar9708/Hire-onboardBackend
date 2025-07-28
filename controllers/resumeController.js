@@ -9,8 +9,8 @@ const cloudinary = require('../config/cloudinary');
 const pdfParse = require('pdf-parse'); // Added this line
 const textract = require('textract'); // Added this line
 const axios = require('axios')
-const { calculateMatchScore } = require('../services/matchingService');
-const Job = require('../models/Job'); 
+const Job = require('../models/Job');
+const {analyzeResumeWithGemini}=require('../services/geminiMatchingService') 
 
 
 const {
@@ -41,12 +41,11 @@ exports.uploadResume = async (req, res) => {
     const cloudinaryResult = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          resource_type: "raw", // ✅ Treat PDFs and docs correctly
-          type: "upload",       // ✅ Ensure file is PUBLIC
+          resource_type: "raw",
+          type: "upload",
           folder: "resumes",
           public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\.[^/.]+$/, "")}`
         },
-
         (error, result) => {
           if (error) {
             console.error('Cloudinary upload error:', error);
@@ -81,6 +80,7 @@ exports.uploadResume = async (req, res) => {
     }
 
     if (!extractedText || extractedText.trim().length === 0) {
+      await cloudinary.uploader.destroy(cloudinaryResult.public_id);
       throw new Error("The file appears to be empty or unreadable");
     }
 
@@ -90,7 +90,7 @@ exports.uploadResume = async (req, res) => {
       firstName,
       middleName,
       lastName,
-      email: extractEmail(extractedText),
+      email: extractEmail(extractedText), // This can be null/undefined
       phone: extractPhone(extractedText),
       skills: extractSkills(extractedText).split(', '),
       experience: extractExperience(extractedText),
@@ -100,12 +100,20 @@ exports.uploadResume = async (req, res) => {
       fileType: req.file.mimetype,
       originalName: req.file.originalname,
       userId: req.user._id,
-      jobId: req.body.jobId // Make sure to include jobId in your request
+      jobId: req.body.jobId
     };
 
-    if (!parsedData.email) {
-      await cloudinary.uploader.destroy(cloudinaryResult.public_id);
-      throw new Error("No email found in resume");
+    if (req.body.jobId) {
+      const job = await Job.findById(req.body.jobId);
+      if (job) {
+        console.log('Starting analysis with job:', job.jobTitle);
+        
+        const aiAnalysis = await analyzeResumeWithGemini(extractedText, job.jobDesc);
+        
+        parsedData.aiAnalysis = aiAnalysis;
+        parsedData.matchingScore = aiAnalysis.matchPercentage;
+        parsedData.status = determineStatus(aiAnalysis);
+      }
     }
 
     const newResume = new Resume(parsedData);
@@ -113,19 +121,70 @@ exports.uploadResume = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Resume uploaded successfully",
       data: savedResume
     });
 
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Upload Error:', {
+      message: error.message,
+      stack: error.stack
+    });
+    
+    // Clean up Cloudinary upload if something failed
+    // if (cloudinaryResult && cloudinaryResult.public_id) {
+    //   await cloudinary.uploader.destroy(cloudinaryResult.public_id).catch(console.error);
+    // }
+    
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to upload resume'
+      error: 'Failed to process resume',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
 
+function determineStatus(analysis) {
+  if (analysis.source === 'Basic Fallback') {
+    return 'Under Review'; // Default status for fallback cases
+  }
+
+  switch (analysis.recommendation) {
+    case 'Strong Match':
+      return 'Shortlisted';
+    case 'Moderate Match':
+      return 'Under Review';
+    case 'Weak Match':
+      return 'Rejected';
+    default:
+      return 'New';
+  }
+}
+
+
+exports.analyzeResume = async (req, res) => {
+  try {
+    const { resumeText, jobDescription } = req.body;
+    
+    if (!resumeText || !jobDescription) {
+      return res.status(400).json({
+        success: false,
+        error: "Both resumeText and jobDescription are required"
+      });
+    }
+
+    const analysis = await analyzeResumeWithGemini(resumeText, jobDescription);
+    
+    res.json({
+      success: true,
+      data: analysis
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Analysis failed'
+    });
+  }
+};
 
 exports.getAllResumes = async (req, res) => {
   try {
@@ -152,7 +211,27 @@ exports.getAllResumes = async (req, res) => {
   }
 };
 
+exports.getResumeByResumeId=async(req,res)=>{
+  try{
+    
+    const resumeData=await Resume.findById(req.params.id)
+    if(!resumeData){
+      return res.status(404).json({
+        success:false,
+        message:"No Resume Found"
+      })
+    }
+    res.status(200).json({
+      success:true,
+      message:"Resume found",
+      resume:resumeData
 
+    })
+
+  }catch(err){
+
+  }
+}
 
 exports.getResumeById = async (req, res) => {
   try {

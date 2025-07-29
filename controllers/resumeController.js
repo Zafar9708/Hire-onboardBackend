@@ -44,7 +44,8 @@ exports.uploadResume = async (req, res) => {
           resource_type: "auto",
           type: "upload",
           folder: "resumes",
-          public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\.[^/.]+$/, "")}`
+          public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\.[^/.]+$/, "")}`,
+          format: "pdf",
         },
         (error, result) => {
           if (error) {
@@ -369,25 +370,29 @@ exports.downloadResumeById = async (req, res) => {
 
 // controllers/resumeController.js
 
+// ResumeController.js
 exports.previewResumeById = async (req, res) => {
   try {
     const candidate = await Candidate.findById(req.params.id);
     if (!candidate || !candidate.resume) {
-      return res.status(404).json({ success: false, error: 'Resume not found' });
+      return res.status(404).json({ success: false, message: 'Resume not found' });
     }
 
     const resume = await Resume.findById(candidate.resume);
+
     if (!resume || !resume.url) {
-      return res.status(404).json({ success: false, error: 'Resume URL not found' });
+      return res.status(404).json({ success: false, message: 'Resume file not found' });
     }
 
-    // Redirect to Cloudinary URL to let browser preview it
-    res.redirect(resume.url); // Or use window.open(resume.url) on frontend
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Failed to preview resume' });
+    // Instead of streaming the file, return the URL for front-end/browser preview
+    return res.status(200).json({ success: true, previewUrl: resume.url });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
 
 
 

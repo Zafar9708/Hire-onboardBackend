@@ -45,7 +45,7 @@ exports.uploadResume = async (req, res) => {
           type: "upload",
           folder: "resumes",
           public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\.[^/.]+$/, "")}`,
-          format: "pdf",
+          flags: 'attachment' 
         },
         (error, result) => {
           if (error) {
@@ -368,9 +368,31 @@ exports.downloadResumeById = async (req, res) => {
 //   }
 // };
 
-// controllers/resumeController.js
-
 // ResumeController.js
+// exports.previewResumeById = async (req, res) => {
+//   try {
+//     const candidate = await Candidate.findById(req.params.id);
+//     if (!candidate || !candidate.resume) {
+//       return res.status(404).json({ success: false, message: 'Resume not found' });
+//     }
+
+//     const resume = await Resume.findById(candidate.resume);
+
+//     if (!resume || !resume.url) {
+//       return res.status(404).json({ success: false, message: 'Resume file not found' });
+//     }
+
+//     // Instead of streaming the file, return the URL for front-end/browser preview
+//     return res.status(200).json({ success: true, previewUrl: resume.url });
+
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ success: false, message: 'Server error' });
+//   }
+// };
+
+//----
+
 exports.previewResumeById = async (req, res) => {
   try {
     const candidate = await Candidate.findById(req.params.id);
@@ -384,16 +406,19 @@ exports.previewResumeById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Resume file not found' });
     }
 
-    // Instead of streaming the file, return the URL for front-end/browser preview
-    return res.status(200).json({ success: true, previewUrl: resume.url });
+    // Add .pdf extension if file is PDF
+    let previewUrl = resume.url;
+    if (resume.fileType === 'application/pdf') {
+      previewUrl += '.pdf';
+    }
+
+    return res.status(200).json({ success: true, previewUrl });
 
   } catch (error) {
     console.error(error);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
-
-
 
 
 exports.deleteResume = async (req, res) => {

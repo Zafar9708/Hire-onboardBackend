@@ -41,7 +41,7 @@ exports.uploadResume = async (req, res) => {
     const cloudinaryResult = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          resource_type: "raw",
+          resource_type: "auto",
           type: "upload",
           folder: "resumes",
           public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\.[^/.]+$/, "")}`
@@ -344,28 +344,51 @@ exports.downloadResumeById = async (req, res) => {
 
 
 
+// exports.previewResumeById = async (req, res) => {
+//   try {
+//     const candidate = await Candidate.findById(req.params.id);
+//     if (!candidate || !candidate.resume) {
+//       return res.status(404).json({ success: false, error: 'Resume not found for this candidate' });
+//     }
+
+//     const resume = await Resume.findById(candidate.resume);
+//     if (!resume?.url) {
+//       return res.status(404).json({ success: false, error: 'Resume URL missing' });
+//     }
+
+//     const response = await axios.get(resume.url, { responseType: 'stream' });
+
+//     res.setHeader('Content-Disposition', `inline; filename="${resume.originalName}"`);
+//     res.setHeader('Content-Type', resume.fileType || 'application/pdf');
+
+//     response.data.pipe(res);
+//   } catch (err) {
+//     res.status(500).json({ success: false, error: err.message || 'Preview failed' });
+//   }
+// };
+
+// controllers/resumeController.js
+
 exports.previewResumeById = async (req, res) => {
   try {
     const candidate = await Candidate.findById(req.params.id);
     if (!candidate || !candidate.resume) {
-      return res.status(404).json({ success: false, error: 'Resume not found for this candidate' });
+      return res.status(404).json({ success: false, error: 'Resume not found' });
     }
 
     const resume = await Resume.findById(candidate.resume);
-    if (!resume?.url) {
-      return res.status(404).json({ success: false, error: 'Resume URL missing' });
+    if (!resume || !resume.url) {
+      return res.status(404).json({ success: false, error: 'Resume URL not found' });
     }
 
-    const response = await axios.get(resume.url, { responseType: 'stream' });
-
-    res.setHeader('Content-Disposition', `inline; filename="${resume.originalName}"`);
-    res.setHeader('Content-Type', resume.fileType || 'application/pdf');
-
-    response.data.pipe(res);
+    // Redirect to Cloudinary URL to let browser preview it
+    res.redirect(resume.url); // Or use window.open(resume.url) on frontend
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message || 'Preview failed' });
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to preview resume' });
   }
 };
+
 
 
 exports.deleteResume = async (req, res) => {

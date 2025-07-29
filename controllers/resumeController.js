@@ -401,22 +401,32 @@ exports.previewResumeById = async (req, res) => {
     }
 
     const resume = await Resume.findById(candidate.resume);
-
     if (!resume || !resume.url) {
       return res.status(404).json({ success: false, message: 'Resume file not found' });
     }
 
-    // Add .pdf extension if file is PDF
-    let previewUrl = resume.url;
-    if (resume.fileType === 'application/pdf') {
-      previewUrl += '.pdf';
-    }
+    // Fetch with error handling
+    const response = await axios.get(resume.url, {
+      responseType: 'arraybuffer',
+      validateStatus: (status) => status === 200, // Reject non-200 responses
+    });
 
-    return res.status(200).json({ success: true, previewUrl });
+    // Set headers before sending
+    res.writeHead(200, {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="${encodeURIComponent(resume.originalName)}"`,
+      'Content-Length': response.data.length,
+    });
+
+    return res.end(response.data, 'binary');
 
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ success: false, message: 'Server error' });
+    console.error('PDF Stream Error:', error.message);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to load PDF',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
   }
 };
 

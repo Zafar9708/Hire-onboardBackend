@@ -10,7 +10,9 @@ const pdfParse = require('pdf-parse'); // Added this line
 const textract = require('textract'); // Added this line
 const axios = require('axios')
 const Job = require('../models/Job');
-const {analyzeResumeWithGemini}=require('../services/geminiMatchingService') 
+// const {analyzeResumeWithGemini}=require('../services/geminiMatchingService') 
+const {analyzeResumeWithPerplexity} = require('../services/perplexityMatchingService')
+
 
 
 const {
@@ -109,7 +111,10 @@ exports.uploadResume = async (req, res) => {
       if (job) {
         console.log('Starting analysis with job:', job.jobTitle);
         
-        const aiAnalysis = await analyzeResumeWithGemini(extractedText, job.jobDesc);
+        // const aiAnalysis = await analyzeResumeWithGemini(extractedText, job.jobDesc);
+         const aiAnalysis = await analyzeResumeWithPerplexity(extractedText, job.jobDesc);
+
+
         
         parsedData.aiAnalysis = aiAnalysis;
         parsedData.matchingScore = aiAnalysis.matchPercentage;

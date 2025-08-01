@@ -275,7 +275,7 @@ const ResumeSchema = new mongoose.Schema({
     type: String,
     trim: true,
     lowercase: true,
-    sparse: true,
+    // sparse: true,
     default: null,
     validate: {
       validator: function(v) {

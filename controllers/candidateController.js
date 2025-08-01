@@ -1,5 +1,3 @@
-
-
 // const { transporter } = require('../config/email');
 // const Candidate = require('../models/Candidate');
 // const { parseResume } = require('../utils/resumeParser');
@@ -337,8 +335,6 @@
 //   getStageByCandidateId
 // };
 
-//---------for restricted 
-
 
 
 const { transporter } = require('../config/email');
@@ -665,6 +661,120 @@ const getStageByCandidateId = async (req, res) => {
   }
 };
 
+const getCandidateResumeAnalysis = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate candidate ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid candidate ID format'
+      });
+    }
+
+    // Find candidate and populate job details including timestamps
+    const candidate = await Candidate.findById(id)
+      .populate({
+        path: 'jobId',
+        select: 'jobName jobTitle department experience jobDesc status createdAt updatedAt'
+      })
+      .populate('stage', 'name')
+      .lean();
+
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        message: 'Candidate not found'
+      });
+    }
+
+    // Check if candidate has a resume
+    if (!candidate.resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'No resume found for this candidate'
+      });
+    }
+
+    // Get resume with analysis data
+    const resume = await Resume.findById(candidate.resume)
+      .select('firstName middleName lastName email phone skills experience education url aiAnalysis matchingScore status parsedAt updatedAt')
+      .lean();
+
+    if (!resume) {
+      return res.status(404).json({
+        success: false,
+        message: 'Resume data not found'
+      });
+    }
+
+    // Prepare response data with job details
+    const responseData = {
+      candidateInfo: {
+        _id: candidate._id,
+        name: `${candidate.firstName} ${candidate.middleName || ''} ${candidate.lastName}`.trim(),
+        currentStage: candidate.stage?.name || 'Not assigned',
+        jobDetails: {
+          jobId: candidate.jobId?._id || null,
+          jobName: candidate.jobId?.jobName || 'N/A',
+          jobTitle: candidate.jobId?.jobTitle || 'N/A',
+          department: candidate.jobId?.department || 'N/A',
+          experience: candidate.jobId?.experience || 'N/A',
+          jobDesc: candidate.jobId?.jobDesc || 'No description available',
+          jobStatus: candidate.jobId?.status || 'N/A',
+          createdAt: candidate.jobId?.createdAt || null,
+          updatedAt: candidate.jobId?.updatedAt || null
+        },
+        source: candidate.source || 'Unknown',
+        availableToJoin: candidate.availableToJoin,
+        location: {
+          current: candidate.currentLocation,
+          preferred: candidate.preferredLocation
+        }
+      },
+      resumeAnalysis: {
+        _id: resume._id,
+        matchPercentage: resume.aiAnalysis?.matchPercentage || 0,
+        matchingScore: resume.matchingScore || 0,
+        status: resume.status || 'Not analyzed',
+        recommendation: resume.aiAnalysis?.recommendation || 'Not available',
+        skills: {
+          matching: resume.aiAnalysis?.matchingSkills || [],
+          missing: resume.aiAnalysis?.missingSkills || []
+        },
+        analysis: {
+          overall: resume.aiAnalysis?.analysis || '',
+          experience: resume.aiAnalysis?.experienceMatch || '',
+          education: resume.aiAnalysis?.educationMatch || ''
+        },
+        resumeUrl: resume.url,
+        parsedAt: resume.parsedAt || resume.createdAt, // Fallback to createdAt if parsedAt doesn't exist
+        lastUpdated: resume.updatedAt
+      },
+      timestamps: {
+        jobCreated: candidate.jobId?.createdAt || null,
+        jobUpdated: candidate.jobId?.updatedAt || null,
+        resumeParsed: resume.parsedAt || resume.createdAt,
+        resumeUpdated: resume.updatedAt
+      }
+    };
+
+    res.status(200).json({
+      success: true,
+      data: responseData
+    });
+
+  } catch (error) {
+    console.error('Error fetching candidate resume analysis:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch candidate resume analysis',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 
 module.exports = {
   createCandidate,
@@ -675,5 +785,6 @@ module.exports = {
   sendBulEmailToCandidate,
   candidateforParticularJob,
   getCandidateStageHistory,
-  getStageByCandidateId
+  getStageByCandidateId,
+  getCandidateResumeAnalysis
 };

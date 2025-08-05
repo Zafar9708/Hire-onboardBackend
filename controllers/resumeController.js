@@ -460,7 +460,7 @@ exports.uploadResume = async (req, res) => {
     const cloudinaryResult = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          resource_type: "auto",
+          resource_type: "raw",
           type: "upload",
           folder: "resumes",
           public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\.[^/.]+$/, "")}`,
@@ -737,94 +737,193 @@ exports.getCandidateResume = async (req, res) => {
   }
 };
 
+// exports.downloadResumeById = async (req, res) => {
+//   try {
+//     const candidate = await Candidate.findById(req.params.id);
+//     if (!candidate || !candidate.resume) {
+//       return res.status(404).json({ 
+//         success: false,
+//         error: 'Candidate or resume not found in database'
+//       });
+//     }
+
+//     const resume = await Resume.findById(candidate.resume);
+//     if (!resume) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Resume record not found'
+//       });
+//     }
+
+//     try {
+//       const fileInfo = await cloudinary.api.resource(resume.cloudinaryId);
+//       console.log('File exists in Cloudinary:', {
+//         public_id: fileInfo.public_id,
+//         format: fileInfo.format,
+//         bytes: fileInfo.bytes
+//       });
+//     } catch (cloudinaryErr) {
+//       console.error('Cloudinary verification failed:', cloudinaryErr);
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Resume file not found in Cloudinary storage',
+//         solution: 'Please re-upload the resume file'
+//       });
+//     }
+
+//     const downloadUrl = cloudinary.url(resume.cloudinaryId, {
+//       secure: true,
+//       sign_url: true,
+//       resource_type: 'raw',
+//       type: 'authenticated',
+//       flags: 'attachment'
+//     });
+
+//     console.log('Final download URL:', downloadUrl);
+
+//     const response = await axios.get(downloadUrl, {
+//       responseType: 'stream',
+//       timeout: 30000
+//     });
+
+//     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(resume.originalName)}"`);
+//     res.setHeader('Content-Type', resume.fileType || 'application/pdf');
+    
+//     response.data.pipe(res);
+
+//     response.data.on('error', (streamError) => {
+//       console.error('Stream error:', streamError);
+//       if (!res.headersSent) {
+//         res.status(500).json({ 
+//           success: false,
+//           error: 'File stream error occurred'
+//         });
+//       }
+//     });
+
+//   } catch (err) {
+//     console.error('Final download error:', {
+//       message: err.message,
+//       stack: err.stack,
+//       timestamp: new Date()
+//     });
+
+//     if (err.message.includes('not found') || err.response?.status === 404) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'The requested file could not be located',
+//         solution: 'Verify the file exists in Cloudinary'
+//       });
+//     }
+
+//     res.status(500).json({
+//       success: false,
+//       error: 'Failed to process download request',
+//       details: process.env.NODE_ENV === 'development' ? err.message : undefined
+//     });
+//   }
+// };
+
 exports.downloadResumeById = async (req, res) => {
+  const { id } = req.params;
+  
   try {
-    // 1. Find candidate and resume
-    const candidate = await Candidate.findById(req.params.id);
-    if (!candidate || !candidate.resume) {
+    console.log(`Starting resume download for candidate ${id}`);
+
+    // 1. Get candidate with resume populated
+    const candidate = await Candidate.findById(id).populate('resume');
+    if (!candidate) {
       return res.status(404).json({ 
         success: false,
-        error: 'Candidate or resume not found in database'
+        error: 'Candidate not found'
       });
     }
 
-    const resume = await Resume.findById(candidate.resume);
-    if (!resume) {
+    if (!candidate.resume) {
       return res.status(404).json({
         success: false,
-        error: 'Resume record not found'
+        error: 'No resume associated with this candidate'
       });
     }
 
-    // 2. Verify file exists in Cloudinary
-    try {
-      const fileInfo = await cloudinary.api.resource(resume.cloudinaryId);
-      console.log('File exists in Cloudinary:', {
-        public_id: fileInfo.public_id,
-        format: fileInfo.format,
-        bytes: fileInfo.bytes
-      });
-    } catch (cloudinaryErr) {
-      console.error('Cloudinary verification failed:', cloudinaryErr);
-      return res.status(404).json({
-        success: false,
-        error: 'Resume file not found in Cloudinary storage',
-        solution: 'Please re-upload the resume file'
-      });
-    }
+    const resume = candidate.resume;
 
-    // 3. Generate fresh download URL (simpler format)
+    // 2. Generate download URL - SPECIAL HANDLING FOR CLOUDINARY
     const downloadUrl = cloudinary.url(resume.cloudinaryId, {
       secure: true,
       sign_url: true,
-      resource_type: 'raw',
+      resource_type: 'raw', // Force raw download regardless of upload type
       type: 'authenticated',
-      flags: 'attachment'
+      flags: 'attachment',
+      expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiry
     });
 
-    console.log('Final download URL:', downloadUrl);
+    console.log('Generated download URL:', downloadUrl);
 
-    // 4. Stream the file with proper error handling
-    const response = await axios.get(downloadUrl, {
-      responseType: 'stream',
-      timeout: 30000
-    });
+    // 3. Stream file from Cloudinary to client
+    try {
+      const response = await axios.get(downloadUrl, {
+        responseType: 'stream',
+        timeout: 30000,
+        headers: {
+          'Accept': 'application/pdf, application/octet-stream',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
 
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(resume.originalName)}"`);
-    res.setHeader('Content-Type', resume.fileType || 'application/pdf');
-    
-    response.data.pipe(res);
+      // Set proper headers
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(resume.originalName)}"`);
+      res.setHeader('Content-Type', resume.fileType || 'application/pdf');
+      
+      // Pipe the stream
+      response.data.pipe(res);
 
-    response.data.on('error', (streamError) => {
-      console.error('Stream error:', streamError);
-      if (!res.headersSent) {
-        res.status(500).json({ 
+      response.data.on('error', (streamError) => {
+        console.error('Download stream error:', streamError.message);
+        if (!res.headersSent) {
+          res.status(500).json({ 
+            success: false,
+            error: 'File download failed during transfer'
+          });
+        }
+      });
+
+    } catch (downloadError) {
+      console.error('Download request failed:', {
+        message: downloadError.message,
+        url: downloadUrl,
+        status: downloadError.response?.status,
+        cloudinaryError: downloadError.response?.headers?.['x-cld-error']
+      });
+      
+      // Special handling for Cloudinary errors
+      if (downloadError.response?.status === 404) {
+        return res.status(404).json({
           success: false,
-          error: 'File stream error occurred'
+          error: 'Resume file not found in storage',
+          solution: 'Please re-upload the resume file'
         });
       }
-    });
 
-  } catch (err) {
-    console.error('Final download error:', {
-      message: err.message,
-      stack: err.stack,
-      timestamp: new Date()
-    });
-
-    // Special handling for different error cases
-    if (err.message.includes('not found') || err.response?.status === 404) {
-      return res.status(404).json({
+      return res.status(502).json({
         success: false,
-        error: 'The requested file could not be located',
-        solution: 'Verify the file exists in Cloudinary'
+        error: 'Failed to retrieve file from storage',
+        details: process.env.NODE_ENV === 'development' ? {
+          status: downloadError.response?.status,
+          cloudinaryError: downloadError.response?.headers?.['x-cld-error']
+        } : undefined
       });
     }
 
+  } catch (err) {
+    console.error('Resume download process failed:', err.message);
+    
     res.status(500).json({
       success: false,
       error: 'Failed to process download request',
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      details: process.env.NODE_ENV === 'development' ? {
+        error: err.message
+      } : undefined
     });
   }
 };
@@ -845,10 +944,9 @@ exports.previewResumeById = async (req, res) => {
       secure: true,
       sign_url: true,
       type: 'authenticated',
-      flags: 'inline' // For browser preview
+      flags: 'inline'
     });
 
-    // Redirect to the signed URL
     return res.redirect(signedUrl);
 
   } catch (err) {

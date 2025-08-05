@@ -9,7 +9,7 @@ const MAX_CONTENT_LENGTH = 6000;
  * Main function to analyze resume against job description using Perplexity API.
  * @param {string} resumeText
  * @param {string} jobDescription
- * @returns {Promise<object>} analysis result JSON
+ * @returns {Promise<object>} 
  */
 async function analyzeResumeWithPerplexity(resumeText, jobDescription) {
   if (!process.env.PERPLEXITY_API_KEY) {
@@ -18,18 +18,15 @@ async function analyzeResumeWithPerplexity(resumeText, jobDescription) {
   }
 
   try {
-    // Clean and truncate inputs to stay under payload size limits
     const cleanJobDesc = cleanText(jobDescription).substring(0, 2000);
     const cleanResume = cleanText(resumeText).substring(0, 4000);
 
-    // Check approximate payload size (just to avoid large 413 errors)
     const payloadSize = JSON.stringify({ job: cleanJobDesc, resume: cleanResume }).length;
     if (payloadSize > MAX_CONTENT_LENGTH) {
       console.warn(`Payload too large (${payloadSize} chars), using chunked analysis`);
       return analyzeInChunks(cleanResume, cleanJobDesc);
     }
 
-    // Compose the prompt carefully
     const prompt = `Analyze this resume against the job description and return JSON with:
 - matchPercentage (0-100)
 - matchingSkills: [{skill: string, confidence: number}]
@@ -109,9 +106,7 @@ Return JSON with {matchingSkills: [{skill, confidence}], missingSkills: string[]
   }
 }
 
-/**
- * Processes the API response, extracting and validating JSON from response content.
- */
+
 function processApiResponse(response) {
   const content = response.data.choices[0].message.content;
   const jsonMatch = content.match(/{.*}/s);
@@ -134,7 +129,6 @@ function processApiResponse(response) {
   };
 }
 
-// Text cleaning utility
 function cleanText(text) {
   return text
     .replace(/\s+/g, ' ')
@@ -142,7 +136,6 @@ function cleanText(text) {
     .trim();
 }
 
-// Basic fallback analysis when API is unreachable or keys missing
 function getBasicAnalysis(resumeText, jobDescription) {
   const jobKeywords = extractKeywords(jobDescription);
   const resumeKeywords = extractKeywords(resumeText);
@@ -169,7 +162,6 @@ function getBasicAnalysis(resumeText, jobDescription) {
   };
 }
 
-// Simple keyword extraction from a pre-set list
 function extractKeywords(text) {
   const commonSkills = [
     "javascript", "node", "react", "python", "java", "angular",".Net","C#",
@@ -180,19 +172,16 @@ function extractKeywords(text) {
   return commonSkills.filter(skill => new RegExp(`\\b${skill}\\b`, 'i').test(text));
 }
 
-// Skill extractor used by skill chunk analysis (very naive)
 function extractSkills(text) {
   return extractKeywords(text);
 }
 
-// Recommendation calculation
 function getRecommendation(score) {
   if (score >= 75) return "Strong Match";
   if (score >= 50) return "Moderate Match";
   return "Weak Match";
 }
 
-// Validation helpers
 function validatePercentage(value) {
   const num = Number(value);
   if (isNaN(num)) return 0;
@@ -218,9 +207,7 @@ function validateRecommendation(value) {
   return valid.includes(value) ? value : "Weak Match";
 }
 
-/**
- * Chunking fallback for very large inputs.
- */
+
 async function analyzeInChunks(resumeText, jobDescription) {
   const skillsAnalysis = await analyzeSkills(resumeText, jobDescription);
   const basicAnalysis = getBasicAnalysis(resumeText, jobDescription);

@@ -359,7 +359,7 @@ const createCandidate = async (req, res) => {
         const cloudinaryResult = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { 
-              resource_type: "raw",
+              resource_type: "auto",
               folder: "resumes",
               public_id: `resume_${Date.now()}_${uploadedFile.originalname.replace(/\.[^/.]+$/, "")}`
             },

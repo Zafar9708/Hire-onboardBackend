@@ -460,7 +460,7 @@ exports.uploadResume = async (req, res) => {
     const cloudinaryResult = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          resource_type: "raw",
+          resource_type: "auto",
           type: "upload",
           folder: "resumes",
           public_id: `resume_${Date.now()}_${req.file.originalname.replace(/\.[^/.]+$/, "")}`,
@@ -848,25 +848,25 @@ exports.downloadResumeById = async (req, res) => {
 
     const resume = candidate.resume;
 
-    // 2. Generate download URL - SPECIAL HANDLING FOR CLOUDINARY
+    // 2. Generate download URL - FORCE RAW DOWNLOAD REGARDLESS OF UPLOAD TYPE
     const downloadUrl = cloudinary.url(resume.cloudinaryId, {
       secure: true,
       sign_url: true,
-      resource_type: 'raw', // Force raw download regardless of upload type
+      resource_type: 'raw', // Always use raw for download
       type: 'authenticated',
       flags: 'attachment',
-      expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour expiry
+      expires_at: Math.floor(Date.now() / 1000) + 3600
     });
 
     console.log('Generated download URL:', downloadUrl);
 
-    // 3. Stream file from Cloudinary to client
+    // 3. Stream file to client
     try {
       const response = await axios.get(downloadUrl, {
         responseType: 'stream',
         timeout: 30000,
         headers: {
-          'Accept': 'application/pdf, application/octet-stream',
+          'Accept': 'application/pdf',
           'X-Requested-With': 'XMLHttpRequest'
         }
       });
@@ -893,24 +893,27 @@ exports.downloadResumeById = async (req, res) => {
         message: downloadError.message,
         url: downloadUrl,
         status: downloadError.response?.status,
-        cloudinaryError: downloadError.response?.headers?.['x-cld-error']
+        headers: downloadError.response?.headers
       });
       
       // Special handling for Cloudinary errors
-      if (downloadError.response?.status === 404) {
-        return res.status(404).json({
+      if (downloadError.response?.headers?.['x-cld-error']) {
+        return res.status(400).json({
           success: false,
-          error: 'Resume file not found in storage',
-          solution: 'Please re-upload the resume file'
+          error: 'Failed to download file',
+          solution: 'The file may need to be re-uploaded',
+          details: process.env.NODE_ENV === 'development' ? {
+            cloudinaryError: downloadError.response.headers['x-cld-error'],
+            cloudinaryId: resume.cloudinaryId
+          } : undefined
         });
       }
-
+      
       return res.status(502).json({
         success: false,
         error: 'Failed to retrieve file from storage',
         details: process.env.NODE_ENV === 'development' ? {
-          status: downloadError.response?.status,
-          cloudinaryError: downloadError.response?.headers?.['x-cld-error']
+          status: downloadError.response?.status
         } : undefined
       });
     }
